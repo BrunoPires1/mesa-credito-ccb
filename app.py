@@ -1,7 +1,6 @@
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import pandas as pd
 import requests
 import os
 import json
@@ -53,25 +52,24 @@ if "user" not in st.session_state:
 # FUNÇÕES
 # ==============================
 
-def carregar_base():
-    data = sheet.get_all_records()
-    df = pd.DataFrame(data)
-    st.write("COLUNAS ENCONTRADAS:")
-    st.write(df.columns)
-    return df
-
 def enviar_teams(msg):
     requests.post(WEBHOOK_TEAMS, json={"text": msg})
 
-def assumir_ccb(ccb, valor, parceiro, analista):
+def carregar_base():
+    dados = sheet.get_all_values()
+    return dados
 
-    df = carregar_base()
+def assumir_ccb(ccb, valor, parceiro, analista):
 
     if not ccb:
         return "Informe a CCB."
 
-    if ccb in df["CCB"].astype(str).values:
-        return "⚠️ CCB já cadastrada."
+    dados = sheet.get_all_values()
+
+    if len(dados) > 1:
+        for linha in dados[1:]:
+            if str(linha[0]) == str(ccb):
+                return "⚠️ CCB já cadastrada."
 
     sheet.append_row([
         ccb,
@@ -160,6 +158,9 @@ if "ccb_ativa" in st.session_state:
 st.divider()
 st.subheader("📊 Painel Geral")
 
-df = carregar_base()
-st.dataframe(df, use_container_width=True)
+dados = carregar_base()
 
+if len(dados) > 0:
+    st.table(dados)
+else:
+    st.write("Nenhum registro encontrado.")
