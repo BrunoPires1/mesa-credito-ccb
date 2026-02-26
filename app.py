@@ -56,8 +56,7 @@ def enviar_teams(msg):
     requests.post(WEBHOOK_TEAMS, json={"text": msg})
 
 def carregar_base():
-    dados = sheet.get_all_values()
-    return dados
+    return sheet.get_all_values()
 
 def assumir_ccb(ccb, valor, parceiro, analista):
 
@@ -97,7 +96,7 @@ def finalizar_ccb(ccb, resultado, anotacoes):
     sheet.update_cell(row, 6, resultado)
     sheet.update_cell(row, 8, anotacoes)
 
-    enviar_teams(f"📢 CCB {ccb} finalizada como {resultado}")
+    enviar_teams(f"📢 CCB {ccb} atualizada para {resultado}")
 
     return "Finalizado"
 
@@ -134,40 +133,40 @@ if "ccb_ativa" in st.session_state:
     st.subheader("Finalizar Análise")
 
     resultado = st.radio(
-    "Resultado",
-    ["Análise Pendente", "Análise Aprovada", "Análise Reprovada"]
-)
+        "Resultado",
+        ["Análise Pendente", "Análise Aprovada", "Análise Reprovada"]
+    )
 
     anotacoes = st.text_area("Anotações")
 
     if st.button("Finalizar Análise"):
 
-    # Se escolher Pendente
-    if resultado == "Análise Pendente":
+        # CASO 1 — PENDENTE
+        if resultado == "Análise Pendente":
 
-        if not anotacoes:
-            st.error("Para Análise Pendente é obrigatório preencher Anotações.")
+            if not anotacoes:
+                st.error("Para Análise Pendente é obrigatório preencher Anotações.")
+            else:
+                finalizar_ccb(
+                    st.session_state["ccb_ativa"],
+                    resultado,
+                    anotacoes
+                )
+
+                st.warning("CCB marcada como Pendente.")
+                # NÃO remove da sessão (continua ativa)
+
+        # CASO 2 — APROVADA OU REPROVADA
         else:
-            resp = finalizar_ccb(
+
+            finalizar_ccb(
                 st.session_state["ccb_ativa"],
                 resultado,
                 anotacoes
             )
 
-            st.warning("CCB marcada como Pendente.")
-            # NÃO remove da sessão
-            # Continua ativa
-
-    else:
-        # Aprovada ou Reprovada
-        resp = finalizar_ccb(
-            st.session_state["ccb_ativa"],
-            resultado,
-            anotacoes
-        )
-
-        st.success("Análise finalizada com sucesso!")
-        del st.session_state["ccb_ativa"]
+            st.success("Análise finalizada com sucesso!")
+            del st.session_state["ccb_ativa"]
 
 # ==============================
 # PAINEL EXECUTIVO
@@ -182,4 +181,3 @@ if len(dados) > 0:
     st.table(dados)
 else:
     st.write("Nenhum registro encontrado.")
-
