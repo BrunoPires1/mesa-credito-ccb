@@ -25,7 +25,7 @@ client = gspread.authorize(creds)
 sheet = client.open(SHEET_NAME).worksheet("BASE_CONTROLE")
 
 # ==============================
-# LOGIN SIMPLES
+# LOGIN
 # ==============================
 
 USERS = {
@@ -49,12 +49,17 @@ if "user" not in st.session_state:
     login()
     st.stop()
 
+analista = st.session_state["user"]
+
 # ==============================
 # FUNÇÕES
 # ==============================
 
 def enviar_teams(msg):
-    requests.post(WEBHOOK_TEAMS, json={"text": msg})
+    try:
+        requests.post(WEBHOOK_TEAMS, json={"text": msg})
+    except:
+        pass
 
 def carregar_base():
     return sheet.get_all_values()
@@ -84,9 +89,11 @@ def assumir_ccb(ccb, valor, parceiro, analista):
 
             if numero == str(ccb):
 
+                # BLOQUEIA se já finalizada
                 if status in ["Análise Aprovada", "Análise Reprovada"]:
                     return "⚠️ Esta CCB já foi finalizada."
 
+                # PERMITE continuar
                 if status in ["Em Análise", "Análise Pendente"]:
                     st.session_state["ccb_ativa"] = ccb
                     return "CONTINUAR"
@@ -110,36 +117,35 @@ def assumir_ccb(ccb, valor, parceiro, analista):
 
 def finalizar_ccb(ccb, resultado, anotacoes):
 
-    cells = sheet.findall(str(ccb))
-    if not cells:
-        return "CCB não encontrada."
+    dados = sheet.get_all_values()
 
-    row = cells[0].row
+    for idx, linha in enumerate(dados[1:], start=2):
 
-    sheet.update_cell(row, 6, resultado)
-    sheet.update_cell(row, 8, anotacoes)
+        if str(linha[0]) == str(ccb):
 
-    enviar_teams(f"📢 CCB {ccb} atualizada para {resultado}")
+            sheet.update_cell(idx, 6, resultado)
+            sheet.update_cell(idx, 8, anotacoes)
 
-    return "Finalizado"
+            enviar_teams(f"📢 CCB {ccb} atualizada para {resultado}")
+            return "Finalizado"
+
+    return "CCB não encontrada."
 
 # ==============================
-# INTERFACE PRINCIPAL
+# INTERFACE
 # ==============================
 
 st.title("📋 Mesa de Análise CCB")
 
-analista = st.session_state["user"]
-
 st.subheader("Assumir / Retomar Análise")
 
-ccb = st.text_input("Número da CCB")
+ccb_input = st.text_input("Número da CCB")
 valor = st.text_input("Valor Líquido")
 parceiro = st.text_input("Parceiro")
 
-# 🔹 Exibir status automaticamente
-if ccb:
-    info = buscar_ccb(ccb)
+# Mostrar status automaticamente
+if ccb_input:
+    info = buscar_ccb(ccb_input)
 
     if info:
         st.info(f"""
@@ -149,25 +155,26 @@ if ccb:
         """)
 
 if st.button("Assumir Análise"):
-    resposta = assumir_ccb(ccb, valor, parceiro, analista)
+
+    resposta = assumir_ccb(ccb_input, valor, parceiro, analista)
 
     if resposta == "OK":
         st.success("CCB criada e assumida com sucesso!")
 
     elif resposta == "CONTINUAR":
-        st.info("Retomando análise desta CCB.")
+        st.success("Retomando análise desta CCB.")
 
     else:
         st.error(resposta)
 
 # ==============================
-# FINALIZAR
+# FINALIZAÇÃO
 # ==============================
 
 if "ccb_ativa" in st.session_state:
 
     st.divider()
-    st.subheader("Finalizar Análise")
+    st.subheader(f"Finalizando CCB {st.session_state['ccb_ativa']}")
 
     resultado = st.radio(
         "Resultado",
@@ -176,23 +183,34 @@ if "ccb_ativa" in st.session_state:
 
     anotacoes = st.text_area("Anotações")
 
-    if st.button("Finalizar Análise"):
+    if st.button("Salvar Resultado"):
 
         if resultado == "Análise Pendente":
 
             if not anotacoes:
                 st.error("Para Análise Pendente é obrigatório preencher Anotações.")
             else:
-                finalizar_ccb(ccb, resultado, anotacoes)
+                finalizar_ccb(
+                    st.session_state["ccb_ativa"],
+                    resultado,
+                    anotacoes
+                )
                 st.warning("CCB marcada como Pendente.")
+                st.rerun()
 
         else:
-            finalizar_ccb(ccb, resultado, anotacoes)
+            finalizar_ccb(
+                st.session_state["ccb_ativa"],
+                resultado,
+                anotacoes
+            )
+
             st.success("Análise finalizada com sucesso!")
             del st.session_state["ccb_ativa"]
+            st.rerun()
 
 # ==============================
-# PAINEL COM FILTRO
+# PAINEL
 # ==============================
 
 st.divider()
@@ -215,10 +233,7 @@ if len(dados) > 1:
 
     st.table([header] + registros)
 
-    # ==============================
-    # DASHBOARD
-    # ==============================
-
+    # Dashboard
     st.divider()
     st.subheader("📈 Dashboard Executivo")
 
