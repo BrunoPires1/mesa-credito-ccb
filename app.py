@@ -134,22 +134,40 @@ if "ccb_ativa" in st.session_state:
     st.subheader("Finalizar Análise")
 
     resultado = st.radio(
-        "Resultado",
-        ["Análise Aprovada", "Análise Reprovada"]
-    )
+    "Resultado",
+    ["Análise Pendente", "Análise Aprovada", "Análise Reprovada"]
+)
 
     anotacoes = st.text_area("Anotações")
 
     if st.button("Finalizar Análise"):
+
+    # Se escolher Pendente
+    if resultado == "Análise Pendente":
+
+        if not anotacoes:
+            st.error("Para Análise Pendente é obrigatório preencher Anotações.")
+        else:
+            resp = finalizar_ccb(
+                st.session_state["ccb_ativa"],
+                resultado,
+                anotacoes
+            )
+
+            st.warning("CCB marcada como Pendente.")
+            # NÃO remove da sessão
+            # Continua ativa
+
+    else:
+        # Aprovada ou Reprovada
         resp = finalizar_ccb(
             st.session_state["ccb_ativa"],
             resultado,
             anotacoes
         )
 
-        if resp == "Finalizado":
-            st.success("Análise finalizada com sucesso!")
-            del st.session_state["ccb_ativa"]
+        st.success("Análise finalizada com sucesso!")
+        del st.session_state["ccb_ativa"]
 
 # ==============================
 # PAINEL EXECUTIVO
@@ -164,3 +182,4 @@ if len(dados) > 0:
     st.table(dados)
 else:
     st.write("Nenhum registro encontrado.")
+
