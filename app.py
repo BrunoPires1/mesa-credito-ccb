@@ -55,7 +55,10 @@ if "user" not in st.session_state:
 
 def carregar_base():
     data = sheet.get_all_records()
-    return pd.DataFrame(data)
+    df = pd.DataFrame(data)
+    st.write("COLUNAS ENCONTRADAS:")
+    st.write(df.columns)
+    return df
 
 def enviar_teams(msg):
     requests.post(WEBHOOK_TEAMS, json={"text": msg})
@@ -159,3 +162,4 @@ st.subheader("📊 Painel Geral")
 
 df = carregar_base()
 st.dataframe(df, use_container_width=True)
+
