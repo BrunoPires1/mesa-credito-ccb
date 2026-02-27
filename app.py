@@ -45,7 +45,19 @@ USERS = {
 }
 
 def login():
+
+    # Logo centralizada no login
+    st.markdown(
+        """
+        <div style='text-align: center; margin-bottom: 30px;'>
+            <img src="logo.png" width="220">
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
     st.title("🔐 Login - Mesa de Crédito")
+
     user = st.text_input("Usuário")
     password = st.text_input("Senha", type="password")
 
@@ -132,10 +144,17 @@ def finalizar_ccb(ccb, resultado, anotacoes):
     return "CCB não encontrada."
 
 # ==============================
-# INTERFACE
+# INTERFACE PRINCIPAL
 # ==============================
 
-st.title("📋 Mesa de Análise CCB")
+# Logo + Título na mesma linha
+col_logo, col_titulo = st.columns([1, 4])
+
+with col_logo:
+    st.image("logo.png", width=180)
+
+with col_titulo:
+    st.title("Mesa de Análise CCB")
 
 st.subheader("Assumir / Retomar Análise")
 
@@ -188,7 +207,6 @@ if "ccb_ativa" in st.session_state:
                 finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
                 st.warning("CCB marcada como Pendente.")
                 st.rerun()
-
         else:
             finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
             st.success("Análise finalizada com sucesso!")
@@ -241,34 +259,6 @@ if len(dados) > 1:
     df = df.sort_values(by="Data da Análise", ascending=False)
 
     st.dataframe(df, use_container_width=True, hide_index=True)
-
-    # ==============================
-    # DASHBOARD POR ANALISTA
-    # ==============================
-
-    st.divider()
-    st.subheader("👤 Dashboard por Analista")
-
-    df["MesAno"] = df["Data da Análise"].dt.strftime("%m/%Y")
-    meses = sorted(df["MesAno"].dropna().unique(), reverse=True)
-
-    if len(meses) > 0:
-
-        mes_sel = st.selectbox("Selecionar Mês/Ano", meses)
-
-        df_mes = df[df["MesAno"] == mes_sel]
-
-        resumo = df_mes.groupby("Analista").agg(
-            Total=("Status Analista", "count"),
-            Em_Analise=("Status Analista", lambda x: (x == "Em Análise").sum()),
-            Pendentes=("Status Analista", lambda x: (x == "Análise Pendente").sum()),
-            Aprovadas=("Status Analista", lambda x: (x == "Análise Aprovada").sum()),
-            Reprovadas=("Status Analista", lambda x: (x == "Análise Reprovada").sum())
-        ).reset_index()
-
-        resumo = resumo.sort_values(by="Total", ascending=False)
-
-        st.dataframe(resumo, use_container_width=True, hide_index=True)
 
 else:
     st.write("Nenhum registro encontrado.")
