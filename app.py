@@ -1,7 +1,6 @@
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import requests
 import os
 import json
 from datetime import datetime
@@ -12,7 +11,6 @@ import pandas as pd
 # ==============================
 
 SHEET_NAME = os.environ["SHEET_NAME"]
-WEBHOOK_TEAMS = os.environ["WEBHOOK_TEAMS"]
 google_creds = json.loads(os.environ["GOOGLE_CREDENTIALS"])
 
 scope = [
@@ -55,12 +53,6 @@ analista = st.session_state["user"]
 # FUNÇÕES
 # ==============================
 
-def enviar_teams(msg):
-    try:
-        requests.post(WEBHOOK_TEAMS, json={"text": msg})
-    except:
-        pass
-
 def carregar_base():
     return sheet.get_all_values()
 
@@ -89,16 +81,14 @@ def assumir_ccb(ccb, valor, parceiro, analista):
 
             if numero == str(ccb):
 
-                # BLOQUEIA se já finalizada
                 if status in ["Análise Aprovada", "Análise Reprovada"]:
                     return "⚠️ Esta CCB já foi finalizada."
 
-                # PERMITE continuar
                 if status in ["Em Análise", "Análise Pendente"]:
                     st.session_state["ccb_ativa"] = ccb
                     return "CONTINUAR"
 
-    # Se não existir → cria nova
+    # Criar nova
     sheet.append_row([
         ccb,
         valor,
@@ -109,8 +99,6 @@ def assumir_ccb(ccb, valor, parceiro, analista):
         analista,
         ""
     ])
-
-    enviar_teams(f"🔎 CCB {ccb} assumida por {analista}")
 
     st.session_state["ccb_ativa"] = ccb
     return "OK"
@@ -125,8 +113,6 @@ def finalizar_ccb(ccb, resultado, anotacoes):
 
             sheet.update_cell(idx, 6, resultado)
             sheet.update_cell(idx, 8, anotacoes)
-
-            enviar_teams(f"📢 CCB {ccb} atualizada para {resultado}")
             return "Finalizado"
 
     return "CCB não encontrada."
@@ -143,7 +129,7 @@ ccb_input = st.text_input("Número da CCB")
 valor = st.text_input("Valor Líquido")
 parceiro = st.text_input("Parceiro")
 
-# Mostrar status automaticamente
+# Mostrar status
 if ccb_input:
     info = buscar_ccb(ccb_input)
 
@@ -233,11 +219,14 @@ if len(dados) > 1:
 
     st.table([header] + registros)
 
-    # Dashboard
+    df = pd.DataFrame(registros, columns=header)
+
+    # ==============================
+    # DASHBOARD EXECUTIVO
+    # ==============================
+
     st.divider()
     st.subheader("📈 Dashboard Executivo")
-
-    df = pd.DataFrame(registros, columns=header)
 
     col1, col2, col3, col4 = st.columns(4)
 
@@ -247,6 +236,56 @@ if len(dados) > 1:
     col4.metric("Reprovadas", df[df["Status Analista"] == "Análise Reprovada"].shape[0])
 
     st.bar_chart(df["Status Analista"].value_counts())
+
+    # ==============================
+    # DASHBOARD POR ANALISTA
+    # ==============================
+
+    st.divider()
+    st.subheader("👤 Performance por Analista")
+
+    analistas = df["Analista"].unique()
+
+    for nome in analistas:
+
+        df_analista = df[df["Analista"] == nome]
+
+        st.markdown(f"### {nome}")
+
+        c1, c2, c3, c4, c5 = st.columns(5)
+
+        c1.metric("Total", df_analista.shape[0])
+        c2.metric("Em Análise", df_analista[df_analista["Status Analista"] == "Em Análise"].shape[0])
+        c3.metric("Pendentes", df_analista[df_analista["Status Analista"] == "Análise Pendente"].shape[0])
+        c4.metric("Aprovadas", df_analista[df_analista["Status Analista"] == "Análise Aprovada"].shape[0])
+        c5.metric("Reprovadas", df_analista[df_analista["Status Analista"] == "Análise Reprovada"].shape[0])
+
+    # ==============================
+    # RELATÓRIO MENSAL
+    # ==============================
+
+    st.divider()
+    st.subheader("📅 Relatório Mensal")
+
+    df["Data da Análise"] = pd.to_datetime(df["Data da Análise"], dayfirst=True, errors="coerce")
+    df["MesAno"] = df["Data da Análise"].dt.strftime("%m/%Y")
+
+    meses = df["MesAno"].dropna().unique()
+
+    if len(meses) > 0:
+
+        mes_selecionado = st.selectbox("Selecione o mês", meses)
+
+        df_mes = df[df["MesAno"] == mes_selecionado]
+
+        m1, m2, m3, m4 = st.columns(4)
+
+        m1.metric("Total", df_mes.shape[0])
+        m2.metric("Aprovadas", df_mes[df_mes["Status Analista"] == "Análise Aprovada"].shape[0])
+        m3.metric("Reprovadas", df_mes[df_mes["Status Analista"] == "Análise Reprovada"].shape[0])
+        m4.metric("Pendentes", df_mes[df_mes["Status Analista"] == "Análise Pendente"].shape[0])
+
+        st.bar_chart(df_mes["Status Analista"].value_counts())
 
 else:
     st.write("Nenhum registro encontrado.")
