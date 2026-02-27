@@ -112,16 +112,18 @@ def assumir_ccb(ccb, valor, parceiro, analista):
                 st.session_state["ccb_ativa"] = ccb
                 return "CONTINUAR"
 
-    sheet.append_row([
-        ccb,
-        valor,
-        parceiro,
-        datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-        "Assinatura Reprovada",
-        "Em Análise",
-        analista,
-        ""
-    ])
+   nova_linha = [
+    ccb,
+    valor,
+    parceiro,
+    datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+    "Assinatura Reprovada",
+    "Em Análise",
+    analista,
+    ""
+]
+
+sheet.insert_row(nova_linha, index=len(dados) + 1)
 
     st.session_state["ccb_ativa"] = ccb
     return "OK"
@@ -132,8 +134,8 @@ def finalizar_ccb(ccb, resultado, anotacoes):
 
     for idx, linha in enumerate(dados[1:], start=2):
         if str(linha[0]) == str(ccb):
-            sheet.update_cell(idx, 6, resultado)
-            sheet.update_cell(idx, 8, anotacoes)
+            sheet.update(f"F{idx}", resultado)
+            sheet.update(f"H{idx}", anotacoes)
             return "Finalizado"
 
     return "CCB não encontrada."
@@ -324,3 +326,4 @@ if len(dados) > 1:
         resumo = resumo.sort_values(by="Total", ascending=False)
 
         st.dataframe(resumo, use_container_width=True, hide_index=True)
+
