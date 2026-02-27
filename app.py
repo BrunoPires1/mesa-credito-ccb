@@ -7,6 +7,8 @@ from datetime import datetime
 import pandas as pd
 import io
 
+st.set_page_config(layout="wide")
+
 # ==============================
 # CONFIGURAÇÕES
 # ==============================
@@ -309,4 +311,5 @@ if len(meses_disponiveis) > 0:
 
 else:
     st.warning("Sem dados disponíveis para dashboard.")
+
 
