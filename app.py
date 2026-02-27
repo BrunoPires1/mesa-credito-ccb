@@ -26,10 +26,10 @@ client = gspread.authorize(creds)
 sheet = client.open(SHEET_NAME).worksheet("BASE_CONTROLE")
 
 # ==============================
-# CACHE (🔥 AUMENTA VELOCIDADE)
+# CACHE
 # ==============================
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=20)
 def carregar_base():
     return sheet.get_all_values()
 
@@ -56,7 +56,6 @@ USERS = {
 }
 
 def login():
-
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
         st.image("logo.png", width=220)
@@ -80,17 +79,8 @@ if "user" not in st.session_state:
 analista = st.session_state["user"]
 
 # ==============================
-# FUNÇÕES PRINCIPAIS
+# FUNÇÕES
 # ==============================
-
-def buscar_ccb(ccb):
-    dados = carregar_base()
-    if len(dados) <= 1:
-        return None
-    for linha in dados[1:]:
-        if str(linha[0]) == str(ccb):
-            return linha
-    return None
 
 def ordenar_planilha():
 
@@ -110,6 +100,9 @@ def ordenar_planilha():
     )
 
     df = df.sort_values(by="Data da Análise", ascending=False)
+
+    # 🔥 CONVERTE DATA DE VOLTA PARA STRING
+    df["Data da Análise"] = df["Data da Análise"].dt.strftime("%d/%m/%Y %H:%M:%S")
 
     sheet.clear()
     sheet.append_row(header)
@@ -146,7 +139,6 @@ def assumir_ccb(ccb, valor, parceiro, analista):
         ""
     ]
 
-    # 🔥 INSERE NA LINHA 2 (sempre topo)
     sheet.insert_row(nova_linha, index=2)
 
     ordenar_planilha()
@@ -172,7 +164,7 @@ def finalizar_ccb(ccb, resultado, anotacoes):
     return "CCB não encontrada."
 
 # ==============================
-# INTERFACE PRINCIPAL
+# INTERFACE
 # ==============================
 
 col_logo, col_titulo = st.columns([1, 4])
@@ -189,17 +181,7 @@ ccb_input = st.text_input("Número da CCB")
 valor = st.text_input("Valor Líquido")
 parceiro = st.text_input("Parceiro")
 
-if ccb_input:
-    info = buscar_ccb(ccb_input)
-    if info:
-        st.info(f"""
-        📌 CCB já existente  
-        👤 Analista: {info[6]}  
-        📊 Status: {info[5]}
-        """)
-
 if st.button("Assumir Análise"):
-
     resposta = assumir_ccb(ccb_input, valor, parceiro, analista)
 
     if resposta == "OK":
@@ -227,21 +209,18 @@ if "ccb_ativa" in st.session_state:
 
     if st.button("Finalizar Análise"):
 
-        if resultado == "Análise Pendente":
-            if not anotacoes:
-                st.error("Para Análise Pendente é obrigatório preencher Anotações.")
-            else:
-                finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
-                st.warning("CCB marcada como Pendente.")
-                st.rerun()
+        if resultado == "Análise Pendente" and not anotacoes:
+            st.error("Para Análise Pendente é obrigatório preencher Anotações.")
         else:
             finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
-            st.success("Análise finalizada com sucesso!")
-            del st.session_state["ccb_ativa"]
+
+            if resultado != "Análise Pendente":
+                del st.session_state["ccb_ativa"]
+
             st.rerun()
 
 # ==============================
-# PAINEL GERAL
+# PAINEL + RANKING
 # ==============================
 
 st.divider()
@@ -255,37 +234,35 @@ if len(dados) > 1:
     registros = dados[1:]
     df = pd.DataFrame(registros, columns=header)
 
-    df["Data da Análise"] = pd.to_datetime(
-        df["Data da Análise"],
-        dayfirst=True,
-        errors="coerce"
-    )
-
-    df = df.dropna(subset=["Data da Análise"])
-
-    hoje = datetime.now().date()
-
-    col1, col2 = st.columns(2)
-
-    data_inicio = col1.date_input("Data Inicial", value=hoje, format="DD/MM/YYYY")
-    data_fim = col2.date_input("Data Final", value=hoje, format="DD/MM/YYYY")
-
-    df = df[
-        (df["Data da Análise"] >= pd.to_datetime(data_inicio)) &
-        (df["Data da Análise"] <= pd.to_datetime(data_fim) + pd.Timedelta(days=1))
-    ]
-
-    status_filtro = st.selectbox(
-        "Filtrar por Status",
-        ["Todos", "Em Análise", "Análise Pendente", "Análise Aprovada", "Análise Reprovada"]
-    )
-
-    if status_filtro != "Todos":
-        df = df[df["Status Analista"] == status_filtro]
+    df["Data da Análise"] = pd.to_datetime(df["Data da Análise"], dayfirst=True)
 
     df = df.sort_values(by="Data da Análise", ascending=False)
 
     st.dataframe(df, use_container_width=True, hide_index=True)
+
+    # ==============================
+    # RANKING ANALISTAS
+    # ==============================
+
+    st.divider()
+    st.subheader("🏆 Ranking Analistas (Mês Atual)")
+
+    df["MesAno"] = df["Data da Análise"].dt.strftime("%m/%Y")
+    mes_atual = datetime.now().strftime("%m/%Y")
+
+    df_mes = df[df["MesAno"] == mes_atual]
+
+    if not df_mes.empty:
+
+        ranking = df_mes.groupby("Analista").agg(
+            Total=("Status Analista", "count"),
+            Aprovadas=("Status Analista", lambda x: (x == "Análise Aprovada").sum()),
+            Reprovadas=("Status Analista", lambda x: (x == "Análise Reprovada").sum())
+        ).reset_index()
+
+        ranking = ranking.sort_values(by="Total", ascending=False)
+
+        st.dataframe(ranking, use_container_width=True, hide_index=True)
 
 else:
     st.write("Nenhum registro encontrado.")
