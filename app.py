@@ -164,6 +164,38 @@ if st.button("Assumir Análise"):
         st.error(resposta)
 
 # ==============================
+# FINALIZAÇÃO
+# ==============================
+
+if "ccb_ativa" in st.session_state:
+
+    st.divider()
+    st.subheader(f"Finalizando CCB {st.session_state['ccb_ativa']}")
+
+    resultado = st.radio(
+        "Resultado",
+        ["Análise Pendente", "Análise Aprovada", "Análise Reprovada"]
+    )
+
+    anotacoes = st.text_area("Anotações")
+
+    if st.button("Finalizar Análise"):
+
+        if resultado == "Análise Pendente":
+            if not anotacoes:
+                st.error("Para Análise Pendente é obrigatório preencher Anotações.")
+            else:
+                finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
+                st.warning("CCB marcada como Pendente.")
+                st.rerun()
+
+        else:
+            finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
+            st.success("Análise finalizada com sucesso!")
+            del st.session_state["ccb_ativa"]
+            st.rerun()
+
+# ==============================
 # PAINEL GERAL
 # ==============================
 
@@ -186,7 +218,6 @@ if len(dados) > 1:
 
     df = df.dropna(subset=["Data da Análise"])
 
-    # 🔹 Filtro padrão HOJE
     hoje = datetime.now().date()
 
     col1, col2 = st.columns(2)
