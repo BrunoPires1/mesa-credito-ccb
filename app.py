@@ -164,38 +164,7 @@ if st.button("Assumir Análise"):
         st.error(resposta)
 
 # ==============================
-# FINALIZAÇÃO
-# ==============================
-
-if "ccb_ativa" in st.session_state:
-
-    st.divider()
-    st.subheader(f"Finalizando CCB {st.session_state['ccb_ativa']}")
-
-    resultado = st.radio(
-        "Resultado",
-        ["Análise Pendente", "Análise Aprovada", "Análise Reprovada"]
-    )
-
-    anotacoes = st.text_area("Anotações")
-
-    if st.button("Salvar Resultado"):
-
-        if resultado == "Análise Pendente":
-            if not anotacoes:
-                st.error("Para Análise Pendente é obrigatório preencher Anotações.")
-            else:
-                finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
-                st.warning("CCB marcada como Pendente.")
-                st.rerun()
-        else:
-            finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
-            st.success("Análise finalizada com sucesso!")
-            del st.session_state["ccb_ativa"]
-            st.rerun()
-
-# ==============================
-# PAINEL
+# PAINEL GERAL
 # ==============================
 
 st.divider()
@@ -217,6 +186,19 @@ if len(dados) > 1:
 
     df = df.dropna(subset=["Data da Análise"])
 
+    # 🔹 Filtro padrão HOJE
+    hoje = datetime.now().date()
+
+    col1, col2 = st.columns(2)
+
+    data_inicio = col1.date_input("Data Inicial", value=hoje, format="DD/MM/YYYY")
+    data_fim = col2.date_input("Data Final", value=hoje, format="DD/MM/YYYY")
+
+    df = df[
+        (df["Data da Análise"] >= pd.to_datetime(data_inicio)) &
+        (df["Data da Análise"] <= pd.to_datetime(data_fim) + pd.Timedelta(days=1))
+    ]
+
     status_filtro = st.selectbox(
         "Filtrar por Status",
         ["Todos", "Em Análise", "Análise Pendente", "Análise Aprovada", "Análise Reprovada"]
@@ -225,74 +207,25 @@ if len(dados) > 1:
     if status_filtro != "Todos":
         df = df[df["Status Analista"] == status_filtro]
 
-    st.dataframe(df, use_container_width=True)
+    df = df.sort_values(by="Data da Análise", ascending=False)
+
+    st.dataframe(df, use_container_width=True, hide_index=True)
 
     # ==============================
-    # RELATÓRIO POR PERÍODO
+    # DASHBOARD POR ANALISTA
     # ==============================
 
     st.divider()
-    st.subheader("📅 Relatório por Período")
+    st.subheader("👤 Dashboard por Analista")
 
-    if not df.empty:
+    df["MesAno"] = df["Data da Análise"].dt.strftime("%m/%Y")
+    meses = sorted(df["MesAno"].dropna().unique(), reverse=True)
 
-        data_min = df["Data da Análise"].min().date()
-        data_max = df["Data da Análise"].max().date()
+    if len(meses) > 0:
 
-        col_inicio, col_fim = st.columns(2)
+        mes_sel = st.selectbox("Selecionar Mês/Ano", meses)
 
-        data_inicio = col_inicio.date_input("Data Inicial", value=data_min, format="DD/MM/YYYY")
-        data_fim = col_fim.date_input("Data Final", value=data_max, format="DD/MM/YYYY")
-
-        df_periodo = df[
-            (df["Data da Análise"] >= pd.to_datetime(data_inicio)) &
-            (df["Data da Análise"] <= pd.to_datetime(data_fim) + pd.Timedelta(days=1))
-        ]
-
-        st.markdown(
-            f"### Período: {data_inicio.strftime('%d/%m/%Y')} até {data_fim.strftime('%d/%m/%Y')}"
-        )
-
-        p1, p2, p3, p4 = st.columns(4)
-
-        p1.metric("Total", df_periodo.shape[0])
-        p2.metric("Aprovadas", df_periodo[df_periodo["Status Analista"] == "Análise Aprovada"].shape[0])
-        p3.metric("Reprovadas", df_periodo[df_periodo["Status Analista"] == "Análise Reprovada"].shape[0])
-        p4.metric("Pendentes", df_periodo[df_periodo["Status Analista"] == "Análise Pendente"].shape[0])
-
-        if not df_periodo.empty:
-
-            st.bar_chart(df_periodo["Status Analista"].value_counts())
-
-            arquivo_excel = gerar_excel(df_periodo)
-
-            st.download_button(
-                label="📥 Baixar Excel do Período",
-                data=arquivo_excel,
-                file_name=f"relatorio_{data_inicio.strftime('%d-%m-%Y')}_ate_{data_fim.strftime('%d-%m-%Y')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-
-        else:
-            st.warning("Nenhum registro encontrado nesse período.")
-
-    # ==============================
-# DASHBOARD POR ANALISTA
-# ==============================
-
-st.divider()
-st.subheader("👤 Dashboard por Analista")
-
-df["MesAno"] = df["Data da Análise"].dt.strftime("%m/%Y")
-meses_disponiveis = sorted(df["MesAno"].dropna().unique(), reverse=True)
-
-if len(meses_disponiveis) > 0:
-
-    mes_selecionado = st.selectbox("Selecionar Mês/Ano", meses_disponiveis)
-
-    df_mes = df[df["MesAno"] == mes_selecionado]
-
-    if not df_mes.empty:
+        df_mes = df[df["MesAno"] == mes_sel]
 
         resumo = df_mes.groupby("Analista").agg(
             Total=("Status Analista", "count"),
@@ -304,12 +237,7 @@ if len(meses_disponiveis) > 0:
 
         resumo = resumo.sort_values(by="Total", ascending=False)
 
-        st.dataframe(resumo, use_container_width=True)
-
-    else:
-        st.warning("Nenhum registro para esse mês.")
+        st.dataframe(resumo, use_container_width=True, hide_index=True)
 
 else:
-    st.warning("Sem dados disponíveis para dashboard.")
-
-
+    st.write("Nenhum registro encontrado.")
