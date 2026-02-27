@@ -28,8 +28,18 @@ sheet = client.open(SHEET_NAME).worksheet("BASE_CONTROLE")
 # ==============================
 
 USERS = {
-    "bruno": "1234",
-    "maria": "1234"
+    "Bruno.Pires": "831227",
+    "Amanda.Fiorio": "135433",
+    "Andressa.Silva": "152909",
+    "Antonio.Aymi": "016912",
+    "Fabio.Moura": "108026",
+    "Hugo.Poltronieri": "104830",
+    "Juliana.Santos": "442908",
+    "KauaFantoni": "183349",
+    "Lorrayne.Falcao": "145472",
+    "Matheus.Machado": "132300",
+    "Nathalia.Moreira": "189966",
+    "Ulisses.Neto": "119715",
 }
 
 def login():
@@ -256,3 +266,4 @@ if len(dados) > 1:
 
 else:
     st.write("Nenhum registro encontrado.")
+
