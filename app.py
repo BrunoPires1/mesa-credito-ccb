@@ -10,31 +10,20 @@ import io
 st.set_page_config(layout="wide")
 
 # ==============================
-# CONFIGURAÇÕES
+# CONFIGURAÇÕES GOOGLE
 # ==============================
 
 SHEET_NAME = os.environ["SHEET_NAME"]
 google_creds = json.loads(os.environ["GOOGLE_CREDENTIALS"])
 
 scope = [
-    "https://spreadsheets.google.com/feeds",
+    "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
 
 creds = ServiceAccountCredentials.from_json_keyfile_dict(google_creds, scope)
 client = gspread.authorize(creds)
 sheet = client.open(SHEET_NAME).worksheet("BASE_CONTROLE")
-
-# ==============================
-# CACHE
-# ==============================
-
-@st.cache_data(ttl=20)
-def carregar_base():
-    return sheet.get_all_values()
-
-def limpar_cache():
-    carregar_base.clear()
 
 # ==============================
 # LOGIN
@@ -56,6 +45,7 @@ USERS = {
 }
 
 def login():
+
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
         st.image("logo.png", width=220)
@@ -82,44 +72,31 @@ analista = st.session_state["user"]
 # FUNÇÕES
 # ==============================
 
-def ordenar_planilha():
+def carregar_base():
+    try:
+        return sheet.get_all_records()
+    except Exception as e:
+        st.error(f"Erro ao carregar planilha: {e}")
+        return []
 
-    dados = sheet.get_all_values()
-    header = dados[0]
-    registros = dados[1:]
-
-    if not registros:
-        return
-
-    df = pd.DataFrame(registros, columns=header)
-
-    df["Data da Análise"] = pd.to_datetime(
-        df["Data da Análise"],
-        dayfirst=True,
-        errors="coerce"
-    )
-
-    df = df.sort_values(by="Data da Análise", ascending=False)
-
-    # 🔥 CONVERTE DATA DE VOLTA PARA STRING
-    df["Data da Análise"] = df["Data da Análise"].dt.strftime("%d/%m/%Y %H:%M:%S")
-
-    sheet.clear()
-    sheet.append_row(header)
-    sheet.append_rows(df.values.tolist())
+def buscar_ccb(ccb):
+    dados = carregar_base()
+    for linha in dados:
+        if str(linha["CCB"]) == str(ccb):
+            return linha
+    return None
 
 def assumir_ccb(ccb, valor, parceiro, analista):
 
     if not ccb:
         return "Informe a CCB."
 
-    dados = sheet.get_all_values()
+    dados = carregar_base()
 
-    for linha in dados[1:]:
-        numero = str(linha[0])
-        status = linha[5]
+    for linha in dados:
+        if str(linha["CCB"]) == str(ccb):
 
-        if numero == str(ccb):
+            status = linha["Status Analista"]
 
             if status in ["Análise Aprovada", "Análise Reprovada"]:
                 return "⚠️ Esta CCB já foi finalizada."
@@ -128,43 +105,53 @@ def assumir_ccb(ccb, valor, parceiro, analista):
                 st.session_state["ccb_ativa"] = ccb
                 return "CONTINUAR"
 
-    nova_linha = [
-        ccb,
-        valor,
-        parceiro,
-        datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-        "Assinatura Reprovada",
-        "Em Análise",
-        analista,
-        ""
-    ]
+    try:
+        sheet.append_row([
+            ccb,
+            valor,
+            parceiro,
+            datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+            "Assinatura Reprovada",
+            "Em Análise",
+            analista,
+            ""
+        ], value_input_option="USER_ENTERED")
 
-    sheet.insert_row(nova_linha, index=2)
+        st.session_state["ccb_ativa"] = ccb
+        return "OK"
 
-    ordenar_planilha()
-    limpar_cache()
-
-    st.session_state["ccb_ativa"] = ccb
-    return "OK"
+    except Exception as e:
+        return f"Erro ao salvar: {e}"
 
 def finalizar_ccb(ccb, resultado, anotacoes):
 
     dados = sheet.get_all_values()
 
     for idx, linha in enumerate(dados[1:], start=2):
+
         if str(linha[0]) == str(ccb):
-            sheet.update_cell(idx, 6, resultado)
-            sheet.update_cell(idx, 8, anotacoes)
 
-            ordenar_planilha()
-            limpar_cache()
+            nova_linha = [
+                linha[0],  # CCB
+                linha[1],  # Valor
+                linha[2],  # Parceiro
+                linha[3],  # Data
+                linha[4],  # Status Bankerize
+                resultado, # Status Analista
+                linha[6],  # Analista
+                anotacoes  # Anotações
+            ]
 
-            return "Finalizado"
+            try:
+                sheet.update(f"A{idx}:H{idx}", [nova_linha])
+                return "Finalizado"
+            except Exception as e:
+                return f"Erro ao atualizar: {e}"
 
     return "CCB não encontrada."
 
 # ==============================
-# INTERFACE
+# INTERFACE PRINCIPAL
 # ==============================
 
 col_logo, col_titulo = st.columns([1, 4])
@@ -181,7 +168,17 @@ ccb_input = st.text_input("Número da CCB")
 valor = st.text_input("Valor Líquido")
 parceiro = st.text_input("Parceiro")
 
+if ccb_input:
+    info = buscar_ccb(ccb_input)
+    if info:
+        st.info(f"""
+        📌 CCB já existente  
+        👤 Analista: {info['Analista']}  
+        📊 Status: {info['Status Analista']}
+        """)
+
 if st.button("Assumir Análise"):
+
     resposta = assumir_ccb(ccb_input, valor, parceiro, analista)
 
     if resposta == "OK":
@@ -212,15 +209,18 @@ if "ccb_ativa" in st.session_state:
         if resultado == "Análise Pendente" and not anotacoes:
             st.error("Para Análise Pendente é obrigatório preencher Anotações.")
         else:
-            finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
+            resp = finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
 
-            if resultado != "Análise Pendente":
-                del st.session_state["ccb_ativa"]
-
-            st.rerun()
+            if "Erro" in resp:
+                st.error(resp)
+            else:
+                if resultado != "Análise Pendente":
+                    del st.session_state["ccb_ativa"]
+                st.success("Registro atualizado com sucesso!")
+                st.rerun()
 
 # ==============================
-# PAINEL + RANKING
+# PAINEL GERAL
 # ==============================
 
 st.divider()
@@ -228,41 +228,19 @@ st.subheader("📊 Painel Geral")
 
 dados = carregar_base()
 
-if len(dados) > 1:
+if dados:
 
-    header = dados[0]
-    registros = dados[1:]
-    df = pd.DataFrame(registros, columns=header)
+    df = pd.DataFrame(dados)
 
-    df["Data da Análise"] = pd.to_datetime(df["Data da Análise"], dayfirst=True)
+    df["Data da Análise"] = pd.to_datetime(
+        df["Data da Análise"],
+        dayfirst=True,
+        errors="coerce"
+    )
 
     df = df.sort_values(by="Data da Análise", ascending=False)
 
     st.dataframe(df, use_container_width=True, hide_index=True)
-
-    # ==============================
-    # RANKING ANALISTAS
-    # ==============================
-
-    st.divider()
-    st.subheader("🏆 Ranking Analistas (Mês Atual)")
-
-    df["MesAno"] = df["Data da Análise"].dt.strftime("%m/%Y")
-    mes_atual = datetime.now().strftime("%m/%Y")
-
-    df_mes = df[df["MesAno"] == mes_atual]
-
-    if not df_mes.empty:
-
-        ranking = df_mes.groupby("Analista").agg(
-            Total=("Status Analista", "count"),
-            Aprovadas=("Status Analista", lambda x: (x == "Análise Aprovada").sum()),
-            Reprovadas=("Status Analista", lambda x: (x == "Análise Reprovada").sum())
-        ).reset_index()
-
-        ranking = ranking.sort_values(by="Total", ascending=False)
-
-        st.dataframe(ranking, use_container_width=True, hide_index=True)
 
 else:
     st.write("Nenhum registro encontrado.")
