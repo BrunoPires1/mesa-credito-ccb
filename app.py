@@ -112,18 +112,19 @@ def assumir_ccb(ccb, valor, parceiro, analista):
                 st.session_state["ccb_ativa"] = ccb
                 return "CONTINUAR"
 
-   nova_linha = [
-    ccb,
-    valor,
-    parceiro,
-    datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-    "Assinatura Reprovada",
-    "Em Análise",
-    analista,
-    ""
-]
+    # 🔥 ALTERAÇÃO AQUI (INSERT_ROW)
+    nova_linha = [
+        ccb,
+        valor,
+        parceiro,
+        datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+        "Assinatura Reprovada",
+        "Em Análise",
+        analista,
+        ""
+    ]
 
-sheet.insert_row(nova_linha, index=len(dados) + 1)
+    sheet.insert_row(nova_linha, index=len(dados) + 1)
 
     st.session_state["ccb_ativa"] = ccb
     return "OK"
@@ -134,8 +135,11 @@ def finalizar_ccb(ccb, resultado, anotacoes):
 
     for idx, linha in enumerate(dados[1:], start=2):
         if str(linha[0]) == str(ccb):
+
+            # 🔥 ALTERAÇÃO AQUI (UPDATE POR RANGE)
             sheet.update(f"F{idx}", resultado)
             sheet.update(f"H{idx}", anotacoes)
+
             return "Finalizado"
 
     return "CCB não encontrada."
@@ -208,10 +212,7 @@ if "ccb_ativa" in st.session_state:
             st.success("Análise finalizada com sucesso!")
 
             del st.session_state["ccb_ativa"]
-
-            # 🔥 RESET PROFISSIONAL DOS CAMPOS
             st.session_state["form_key"] += 1
-
             st.rerun()
 
 # ==============================
@@ -326,4 +327,3 @@ if len(dados) > 1:
         resumo = resumo.sort_values(by="Total", ascending=False)
 
         st.dataframe(resumo, use_container_width=True, hide_index=True)
-
