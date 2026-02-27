@@ -63,6 +63,13 @@ if "user" not in st.session_state:
 analista = st.session_state["user"]
 
 # ==============================
+# CONTROLE DE FORMULÁRIO DINÂMICO
+# ==============================
+
+if "form_key" not in st.session_state:
+    st.session_state["form_key"] = 0
+
+# ==============================
 # FUNÇÕES
 # ==============================
 
@@ -139,9 +146,20 @@ st.title("📋 Mesa de Análise CCB")
 
 st.subheader("Assumir / Retomar Análise")
 
-ccb_input = st.text_input("Número da CCB", key="campo_ccb")
-valor = st.text_input("Valor Líquido", key="campo_valor")
-parceiro = st.text_input("Parceiro", key="campo_parceiro")
+ccb_input = st.text_input(
+    "Número da CCB",
+    key=f"campo_ccb_{st.session_state['form_key']}"
+)
+
+valor = st.text_input(
+    "Valor Líquido",
+    key=f"campo_valor_{st.session_state['form_key']}"
+)
+
+parceiro = st.text_input(
+    "Parceiro",
+    key=f"campo_parceiro_{st.session_state['form_key']}"
+)
 
 if ccb_input:
     info = buscar_ccb(ccb_input)
@@ -181,20 +199,17 @@ if "ccb_ativa" in st.session_state:
 
     if st.button("Finalizar Análise"):
 
-        if resultado == "Análise Pendente":
-            if not anotacoes:
-                st.error("Para Análise Pendente é obrigatório preencher Anotações.")
-            else:
-                finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
-                st.warning("CCB marcada como Pendente.")
-                st.rerun()
-
+        if resultado == "Análise Pendente" and not anotacoes:
+            st.error("Para Análise Pendente é obrigatório preencher Anotações.")
         else:
             finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
             st.success("Análise finalizada com sucesso!")
-            st.session_state["campo_ccb"] = ""
-            st.session_state["campo_valor"] = ""
-            st.session_state["campo_parceiro"] = ""
+
+            del st.session_state["ccb_ativa"]
+
+            # 🔥 RESET PROFISSIONAL DOS CAMPOS
+            st.session_state["form_key"] += 1
+
             st.rerun()
 
 # ==============================
@@ -244,9 +259,9 @@ if len(dados) > 1:
 
     st.dataframe(df, use_container_width=True, hide_index=True)
 
-    # =====================================================
-    # 📈 RESUMO DO MÊS ATUAL (NOVO BLOCO INSERIDO AQUI)
-    # =====================================================
+    # ==============================
+    # RESUMO DO MÊS ATUAL
+    # ==============================
 
     st.divider()
     st.subheader("📈 Resumo do Mês Atual")
@@ -309,7 +324,3 @@ if len(dados) > 1:
         resumo = resumo.sort_values(by="Total", ascending=False)
 
         st.dataframe(resumo, use_container_width=True, hide_index=True)
-
-else:
-    st.write("Nenhum registro encontrado.")
-
