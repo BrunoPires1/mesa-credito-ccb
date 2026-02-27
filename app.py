@@ -10,14 +10,14 @@ import io
 st.set_page_config(layout="wide")
 
 # ==============================
-# CONFIGURAÇÕES GOOGLE
+# CONFIGURAÇÕES
 # ==============================
 
 SHEET_NAME = os.environ["SHEET_NAME"]
 google_creds = json.loads(os.environ["GOOGLE_CREDENTIALS"])
 
 scope = [
-    "https://www.googleapis.com/auth/spreadsheets",
+    "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive"
 ]
 
@@ -46,11 +46,17 @@ USERS = {
 
 def login():
 
-    col1, col2, col3 = st.columns([1,2,1])
-    with col2:
-        st.image("logo.png", width=220)
+    # Logo centralizada no login
+    st.markdown(
+        """
+        <div style='text-align: center; margin-bottom: 30px;'>
+            <img src="logo.png" width="220">
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    st.markdown("<h2 style='text-align:center;'>Login - Mesa de Crédito</h2>", unsafe_allow_html=True)
+    st.title("🔐 Login - Mesa de Crédito")
 
     user = st.text_input("Usuário")
     password = st.text_input("Senha", type="password")
@@ -72,17 +78,22 @@ analista = st.session_state["user"]
 # FUNÇÕES
 # ==============================
 
+def gerar_excel(df):
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        df.to_excel(writer, index=False, sheet_name="Relatorio")
+    output.seek(0)
+    return output
+
 def carregar_base():
-    try:
-        return sheet.get_all_records()
-    except Exception as e:
-        st.error(f"Erro ao carregar planilha: {e}")
-        return []
+    return sheet.get_all_values()
 
 def buscar_ccb(ccb):
-    dados = carregar_base()
-    for linha in dados:
-        if str(linha["CCB"]) == str(ccb):
+    dados = sheet.get_all_values()
+    if len(dados) <= 1:
+        return None
+    for linha in dados[1:]:
+        if str(linha[0]) == str(ccb):
             return linha
     return None
 
@@ -91,12 +102,13 @@ def assumir_ccb(ccb, valor, parceiro, analista):
     if not ccb:
         return "Informe a CCB."
 
-    dados = carregar_base()
+    dados = sheet.get_all_values()
 
-    for linha in dados:
-        if str(linha["CCB"]) == str(ccb):
+    for linha in dados[1:]:
+        numero = str(linha[0])
+        status = linha[5]
 
-            status = linha["Status Analista"]
+        if numero == str(ccb):
 
             if status in ["Análise Aprovada", "Análise Reprovada"]:
                 return "⚠️ Esta CCB já foi finalizada."
@@ -105,48 +117,29 @@ def assumir_ccb(ccb, valor, parceiro, analista):
                 st.session_state["ccb_ativa"] = ccb
                 return "CONTINUAR"
 
-    try:
-        sheet.append_row([
-            ccb,
-            valor,
-            parceiro,
-            datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-            "Assinatura Reprovada",
-            "Em Análise",
-            analista,
-            ""
-        ], value_input_option="USER_ENTERED")
+    sheet.append_row([
+        ccb,
+        valor,
+        parceiro,
+        datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+        "Assinatura Reprovada",
+        "Em Análise",
+        analista,
+        ""
+    ])
 
-        st.session_state["ccb_ativa"] = ccb
-        return "OK"
-
-    except Exception as e:
-        return f"Erro ao salvar: {e}"
+    st.session_state["ccb_ativa"] = ccb
+    return "OK"
 
 def finalizar_ccb(ccb, resultado, anotacoes):
 
     dados = sheet.get_all_values()
 
     for idx, linha in enumerate(dados[1:], start=2):
-
         if str(linha[0]) == str(ccb):
-
-            nova_linha = [
-                linha[0],  # CCB
-                linha[1],  # Valor
-                linha[2],  # Parceiro
-                linha[3],  # Data
-                linha[4],  # Status Bankerize
-                resultado, # Status Analista
-                linha[6],  # Analista
-                anotacoes  # Anotações
-            ]
-
-            try:
-                sheet.update(f"A{idx}:H{idx}", [nova_linha])
-                return "Finalizado"
-            except Exception as e:
-                return f"Erro ao atualizar: {e}"
+            sheet.update_cell(idx, 6, resultado)
+            sheet.update_cell(idx, 8, anotacoes)
+            return "Finalizado"
 
     return "CCB não encontrada."
 
@@ -154,6 +147,7 @@ def finalizar_ccb(ccb, resultado, anotacoes):
 # INTERFACE PRINCIPAL
 # ==============================
 
+# Logo + Título na mesma linha
 col_logo, col_titulo = st.columns([1, 4])
 
 with col_logo:
@@ -173,8 +167,8 @@ if ccb_input:
     if info:
         st.info(f"""
         📌 CCB já existente  
-        👤 Analista: {info['Analista']}  
-        📊 Status: {info['Status Analista']}
+        👤 Analista: {info[6]}  
+        📊 Status: {info[5]}
         """)
 
 if st.button("Assumir Análise"):
@@ -206,18 +200,18 @@ if "ccb_ativa" in st.session_state:
 
     if st.button("Finalizar Análise"):
 
-        if resultado == "Análise Pendente" and not anotacoes:
-            st.error("Para Análise Pendente é obrigatório preencher Anotações.")
-        else:
-            resp = finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
-
-            if "Erro" in resp:
-                st.error(resp)
+        if resultado == "Análise Pendente":
+            if not anotacoes:
+                st.error("Para Análise Pendente é obrigatório preencher Anotações.")
             else:
-                if resultado != "Análise Pendente":
-                    del st.session_state["ccb_ativa"]
-                st.success("Registro atualizado com sucesso!")
+                finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
+                st.warning("CCB marcada como Pendente.")
                 st.rerun()
+        else:
+            finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
+            st.success("Análise finalizada com sucesso!")
+            del st.session_state["ccb_ativa"]
+            st.rerun()
 
 # ==============================
 # PAINEL GERAL
@@ -228,15 +222,39 @@ st.subheader("📊 Painel Geral")
 
 dados = carregar_base()
 
-if dados:
+if len(dados) > 1:
 
-    df = pd.DataFrame(dados)
+    header = dados[0]
+    registros = dados[1:]
+    df = pd.DataFrame(registros, columns=header)
 
     df["Data da Análise"] = pd.to_datetime(
         df["Data da Análise"],
         dayfirst=True,
         errors="coerce"
     )
+
+    df = df.dropna(subset=["Data da Análise"])
+
+    hoje = datetime.now().date()
+
+    col1, col2 = st.columns(2)
+
+    data_inicio = col1.date_input("Data Inicial", value=hoje, format="DD/MM/YYYY")
+    data_fim = col2.date_input("Data Final", value=hoje, format="DD/MM/YYYY")
+
+    df = df[
+        (df["Data da Análise"] >= pd.to_datetime(data_inicio)) &
+        (df["Data da Análise"] <= pd.to_datetime(data_fim) + pd.Timedelta(days=1))
+    ]
+
+    status_filtro = st.selectbox(
+        "Filtrar por Status",
+        ["Todos", "Em Análise", "Análise Pendente", "Análise Aprovada", "Análise Reprovada"]
+    )
+
+    if status_filtro != "Todos":
+        df = df[df["Status Analista"] == status_filtro]
 
     df = df.sort_values(by="Data da Análise", ascending=False)
 
