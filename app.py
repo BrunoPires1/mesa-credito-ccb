@@ -5,6 +5,7 @@ import os
 import json
 from datetime import datetime
 import pandas as pd
+import io
 
 # ==============================
 # CONFIGURAÇÕES
@@ -53,6 +54,13 @@ analista = st.session_state["user"]
 # FUNÇÕES
 # ==============================
 
+def gerar_excel(df):
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        df.to_excel(writer, index=False, sheet_name="Relatorio")
+    output.seek(0)
+    return output
+
 def carregar_base():
     return sheet.get_all_values()
 
@@ -60,7 +68,6 @@ def buscar_ccb(ccb):
     dados = sheet.get_all_values()
     if len(dados) <= 1:
         return None
-
     for linha in dados[1:]:
         if str(linha[0]) == str(ccb):
             return linha
@@ -75,7 +82,6 @@ def assumir_ccb(ccb, valor, parceiro, analista):
 
     if len(dados) > 1:
         for linha in dados[1:]:
-
             numero = str(linha[0])
             status = linha[5]
 
@@ -88,7 +94,6 @@ def assumir_ccb(ccb, valor, parceiro, analista):
                     st.session_state["ccb_ativa"] = ccb
                     return "CONTINUAR"
 
-    # Criar nova
     sheet.append_row([
         ccb,
         valor,
@@ -108,9 +113,7 @@ def finalizar_ccb(ccb, resultado, anotacoes):
     dados = sheet.get_all_values()
 
     for idx, linha in enumerate(dados[1:], start=2):
-
         if str(linha[0]) == str(ccb):
-
             sheet.update_cell(idx, 6, resultado)
             sheet.update_cell(idx, 8, anotacoes)
             return "Finalizado"
@@ -129,10 +132,8 @@ ccb_input = st.text_input("Número da CCB")
 valor = st.text_input("Valor Líquido")
 parceiro = st.text_input("Parceiro")
 
-# Mostrar status
 if ccb_input:
     info = buscar_ccb(ccb_input)
-
     if info:
         st.info(f"""
         📌 CCB já existente  
@@ -146,10 +147,8 @@ if st.button("Assumir Análise"):
 
     if resposta == "OK":
         st.success("CCB criada e assumida com sucesso!")
-
     elif resposta == "CONTINUAR":
         st.success("Retomando análise desta CCB.")
-
     else:
         st.error(resposta)
 
@@ -176,21 +175,12 @@ if "ccb_ativa" in st.session_state:
             if not anotacoes:
                 st.error("Para Análise Pendente é obrigatório preencher Anotações.")
             else:
-                finalizar_ccb(
-                    st.session_state["ccb_ativa"],
-                    resultado,
-                    anotacoes
-                )
+                finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
                 st.warning("CCB marcada como Pendente.")
                 st.rerun()
 
         else:
-            finalizar_ccb(
-                st.session_state["ccb_ativa"],
-                resultado,
-                anotacoes
-            )
-
+            finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
             st.success("Análise finalizada com sucesso!")
             del st.session_state["ccb_ativa"]
             st.rerun()
@@ -208,6 +198,9 @@ if len(dados) > 1:
 
     header = dados[0]
     registros = dados[1:]
+    df = pd.DataFrame(registros, columns=header)
+
+    df["Data da Análise"] = pd.to_datetime(df["Data da Análise"], dayfirst=True, errors="coerce")
 
     status_filtro = st.selectbox(
         "Filtrar por Status",
@@ -215,77 +208,51 @@ if len(dados) > 1:
     )
 
     if status_filtro != "Todos":
-        registros = [r for r in registros if r[5] == status_filtro]
+        df = df[df["Status Analista"] == status_filtro]
 
-    st.table([header] + registros)
-
-    df = pd.DataFrame(registros, columns=header)
+    st.dataframe(df, use_container_width=True)
 
     # ==============================
-    # DASHBOARD EXECUTIVO
+    # RELATÓRIO POR PERÍODO + EXPORTAÇÃO
     # ==============================
 
     st.divider()
-    st.subheader("📈 Dashboard Executivo")
+    st.subheader("📅 Relatório por Período")
 
-    col1, col2, col3, col4 = st.columns(4)
+    col_inicio, col_fim = st.columns(2)
 
-    col1.metric("Em Análise", df[df["Status Analista"] == "Em Análise"].shape[0])
-    col2.metric("Pendentes", df[df["Status Analista"] == "Análise Pendente"].shape[0])
-    col3.metric("Aprovadas", df[df["Status Analista"] == "Análise Aprovada"].shape[0])
-    col4.metric("Reprovadas", df[df["Status Analista"] == "Análise Reprovada"].shape[0])
+    data_inicio = col_inicio.date_input("Data Inicial", value=df["Data da Análise"].min())
+    data_fim = col_fim.date_input("Data Final", value=df["Data da Análise"].max())
 
-    st.bar_chart(df["Status Analista"].value_counts())
+    df_periodo = df[
+        (df["Data da Análise"] >= pd.to_datetime(data_inicio)) &
+        (df["Data da Análise"] <= pd.to_datetime(data_fim))
+    ]
 
-    # ==============================
-    # DASHBOARD POR ANALISTA
-    # ==============================
+    st.write(f"### Período: {data_inicio} até {data_fim}")
 
-    st.divider()
-    st.subheader("👤 Performance por Analista")
+    p1, p2, p3, p4 = st.columns(4)
 
-    analistas = df["Analista"].unique()
+    p1.metric("Total", df_periodo.shape[0])
+    p2.metric("Aprovadas", df_periodo[df_periodo["Status Analista"] == "Análise Aprovada"].shape[0])
+    p3.metric("Reprovadas", df_periodo[df_periodo["Status Analista"] == "Análise Reprovada"].shape[0])
+    p4.metric("Pendentes", df_periodo[df_periodo["Status Analista"] == "Análise Pendente"].shape[0])
 
-    for nome in analistas:
+    if not df_periodo.empty:
 
-        df_analista = df[df["Analista"] == nome]
+        st.bar_chart(df_periodo["Status Analista"].value_counts())
 
-        st.markdown(f"### {nome}")
+        arquivo_excel = gerar_excel(df_periodo)
 
-        c1, c2, c3, c4, c5 = st.columns(5)
+        st.download_button(
+            label="📥 Baixar Excel do Período",
+            data=arquivo_excel,
+            file_name=f"relatorio_{data_inicio}_ate_{data_fim}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 
-        c1.metric("Total", df_analista.shape[0])
-        c2.metric("Em Análise", df_analista[df_analista["Status Analista"] == "Em Análise"].shape[0])
-        c3.metric("Pendentes", df_analista[df_analista["Status Analista"] == "Análise Pendente"].shape[0])
-        c4.metric("Aprovadas", df_analista[df_analista["Status Analista"] == "Análise Aprovada"].shape[0])
-        c5.metric("Reprovadas", df_analista[df_analista["Status Analista"] == "Análise Reprovada"].shape[0])
-
-    # ==============================
-    # RELATÓRIO MENSAL
-    # ==============================
-
-    st.divider()
-    st.subheader("📅 Relatório Mensal")
-
-    df["Data da Análise"] = pd.to_datetime(df["Data da Análise"], dayfirst=True, errors="coerce")
-    df["MesAno"] = df["Data da Análise"].dt.strftime("%m/%Y")
-
-    meses = df["MesAno"].dropna().unique()
-
-    if len(meses) > 0:
-
-        mes_selecionado = st.selectbox("Selecione o mês", meses)
-
-        df_mes = df[df["MesAno"] == mes_selecionado]
-
-        m1, m2, m3, m4 = st.columns(4)
-
-        m1.metric("Total", df_mes.shape[0])
-        m2.metric("Aprovadas", df_mes[df_mes["Status Analista"] == "Análise Aprovada"].shape[0])
-        m3.metric("Reprovadas", df_mes[df_mes["Status Analista"] == "Análise Reprovada"].shape[0])
-        m4.metric("Pendentes", df_mes[df_mes["Status Analista"] == "Análise Pendente"].shape[0])
-
-        st.bar_chart(df_mes["Status Analista"].value_counts())
+    else:
+        st.warning("Nenhum registro encontrado nesse período.")
 
 else:
     st.write("Nenhum registro encontrado.")
