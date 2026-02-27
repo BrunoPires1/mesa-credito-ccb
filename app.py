@@ -139,9 +139,9 @@ st.title("📋 Mesa de Análise CCB")
 
 st.subheader("Assumir / Retomar Análise")
 
-ccb_input = st.text_input("Número da CCB")
-valor = st.text_input("Valor Líquido")
-parceiro = st.text_input("Parceiro")
+ccb_input = st.text_input("Número da CCB", key="campo_ccb")
+valor = st.text_input("Valor Líquido", key="campo_valor")
+parceiro = st.text_input("Parceiro", key="campo_parceiro")
 
 if ccb_input:
     info = buscar_ccb(ccb_input)
@@ -192,7 +192,9 @@ if "ccb_ativa" in st.session_state:
         else:
             finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
             st.success("Análise finalizada com sucesso!")
-            del st.session_state["ccb_ativa"]
+            st.session_state["campo_ccb"] = ""
+            st.session_state["campo_valor"] = ""
+            st.session_state["campo_parceiro"] = ""
             st.rerun()
 
 # ==============================
@@ -310,3 +312,4 @@ if len(dados) > 1:
 
 else:
     st.write("Nenhum registro encontrado.")
+
