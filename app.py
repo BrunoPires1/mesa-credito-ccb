@@ -276,51 +276,51 @@ if len(dados) > 1:
 
     if not df_mes_atual.empty:
 
-    pendentes = df_mes_atual[df_mes_atual["Status Analista"] == "Análise Pendente"].shape[0]
-    aprovadas = df_mes_atual[df_mes_atual["Status Analista"] == "Análise Aprovada"].shape[0]
-    reprovadas = df_mes_atual[df_mes_atual["Status Analista"] == "Análise Reprovada"].shape[0]
-    total = df_mes_atual.shape[0]
+        pendentes = df_mes_atual[df_mes_atual["Status Analista"] == "Análise Pendente"].shape[0]
+        aprovadas = df_mes_atual[df_mes_atual["Status Analista"] == "Análise Aprovada"].shape[0]
+        reprovadas = df_mes_atual[df_mes_atual["Status Analista"] == "Análise Reprovada"].shape[0]
+        total = df_mes_atual.shape[0]
 
-    resumo_mes = pd.DataFrame({
-        "Status": [
-            "Propostas Pendentes",
-            "Propostas Aprovadas",
-            "Propostas Reprovadas",
-            "Total de Propostas"
-        ],
-        "Quantidade": [
-            pendentes,
-            aprovadas,
-            reprovadas,
-            total
-        ]
-    })
+        resumo_mes = pd.DataFrame({
+            "Status": [
+                "Propostas Pendentes",
+                "Propostas Aprovadas",
+                "Propostas Reprovadas",
+                "Total de Propostas"
+            ],
+            "Quantidade": [
+                pendentes,
+                aprovadas,
+                reprovadas,
+                total
+            ]
+        })
 
-    import matplotlib.pyplot as plt
+        import matplotlib.pyplot as plt
 
-    fig, ax = plt.subplots()
+        fig, ax = plt.subplots()
 
-    barras = ax.bar(resumo_mes["Status"], resumo_mes["Quantidade"])
+        barras = ax.bar(resumo_mes["Status"], resumo_mes["Quantidade"])
 
-    # Adiciona rótulo (quantidade) acima das barras
-    for barra in barras:
-        altura = barra.get_height()
-        ax.text(
-            barra.get_x() + barra.get_width() / 2,
-            altura,
-            f'{int(altura)}',
-            ha='center',
-            va='bottom'
-        )
+        # Adiciona rótulo (quantidade) acima das barras
+        for barra in barras:
+            altura = barra.get_height()
+            ax.text(
+                barra.get_x() + barra.get_width() / 2,
+                altura,
+                f'{int(altura)}',
+                ha='center',
+                va='bottom'
+            )
 
-    ax.set_ylabel("Quantidade")
-    ax.set_title("Resumo do Mês Atual")
-    plt.xticks(rotation=45)
+        ax.set_ylabel("Quantidade")
+        ax.set_title("Resumo do Mês Atual")
+        plt.xticks(rotation=45)
 
-    st.pyplot(fig)
+        st.pyplot(fig)
 
     else:
-    st.info("Nenhuma proposta encontrada no mês atual.")
+        st.info("Nenhuma proposta encontrada no mês atual.")
 
     # ==============================
     # DASHBOARD POR ANALISTA
@@ -348,6 +348,7 @@ if len(dados) > 1:
         resumo = resumo.sort_values(by="Total", ascending=False)
 
         st.dataframe(resumo, use_container_width=True, hide_index=True)
+
 
 
 
