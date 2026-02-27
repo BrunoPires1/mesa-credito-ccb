@@ -46,17 +46,12 @@ USERS = {
 
 def login():
 
-    # Logo centralizada no login
-    st.markdown(
-        """
-        <div style='text-align: center; margin-bottom: 30px;'>
-            <img src="logo.png" width="220">
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    # Logo centralizada corretamente
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        st.image("logo.png", width=220)
 
-    st.title("🔐 Login - Mesa de Crédito")
+    st.markdown("<h2 style='text-align:center;'>Login - Mesa de Crédito</h2>", unsafe_allow_html=True)
 
     user = st.text_input("Usuário")
     password = st.text_input("Senha", type="password")
@@ -147,7 +142,6 @@ def finalizar_ccb(ccb, resultado, anotacoes):
 # INTERFACE PRINCIPAL
 # ==============================
 
-# Logo + Título na mesma linha
 col_logo, col_titulo = st.columns([1, 4])
 
 with col_logo:
