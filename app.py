@@ -275,14 +275,16 @@ if len(dados) > 1:
             st.warning("Nenhum registro encontrado nesse período.")
 
     # ==============================
-    # DASHBOARD POR ANALISTA
-    # ==============================
+# DASHBOARD POR ANALISTA
+# ==============================
 
-    st.divider()
-    st.subheader("👤 Dashboard por Analista")
+st.divider()
+st.subheader("👤 Dashboard por Analista")
 
-    df["MesAno"] = df["Data da Análise"].dt.strftime("%m/%Y")
-    meses_disponiveis = sorted(df["MesAno"].unique(), reverse=True)
+df["MesAno"] = df["Data da Análise"].dt.strftime("%m/%Y")
+meses_disponiveis = sorted(df["MesAno"].dropna().unique(), reverse=True)
+
+if len(meses_disponiveis) > 0:
 
     mes_selecionado = st.selectbox("Selecionar Mês/Ano", meses_disponiveis)
 
@@ -291,7 +293,7 @@ if len(dados) > 1:
     if not df_mes.empty:
 
         resumo = df_mes.groupby("Analista").agg(
-            Total=("Número da CCB", "count"),
+            Total=("Status Analista", "count"),
             Em_Analise=("Status Analista", lambda x: (x == "Em Análise").sum()),
             Pendentes=("Status Analista", lambda x: (x == "Análise Pendente").sum()),
             Aprovadas=("Status Analista", lambda x: (x == "Análise Aprovada").sum()),
@@ -306,4 +308,5 @@ if len(dados) > 1:
         st.warning("Nenhum registro para esse mês.")
 
 else:
-    st.write("Nenhum registro encontrado.")
+    st.warning("Sem dados disponíveis para dashboard.")
+
