@@ -186,7 +186,6 @@ if "ccb_ativa" in st.session_state:
                 finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
                 st.warning("CCB marcada como Pendente.")
                 st.rerun()
-
         else:
             finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
             st.success("Análise finalizada com sucesso!")
@@ -208,7 +207,6 @@ if len(dados) > 1:
     registros = dados[1:]
     df = pd.DataFrame(registros, columns=header)
 
-    # Converter data com segurança
     df["Data da Análise"] = pd.to_datetime(
         df["Data da Análise"],
         dayfirst=True,
@@ -236,20 +234,22 @@ if len(dados) > 1:
 
     if not df.empty:
 
-        data_min = df["Data da Análise"].min()
-        data_max = df["Data da Análise"].max()
+        data_min = df["Data da Análise"].min().date()
+        data_max = df["Data da Análise"].max().date()
 
         col_inicio, col_fim = st.columns(2)
 
-        data_inicio = col_inicio.date_input("Data Inicial", value=data_min)
-        data_fim = col_fim.date_input("Data Final", value=data_max)
+        data_inicio = col_inicio.date_input("Data Inicial", value=data_min, format="DD/MM/YYYY")
+        data_fim = col_fim.date_input("Data Final", value=data_max, format="DD/MM/YYYY")
 
         df_periodo = df[
             (df["Data da Análise"] >= pd.to_datetime(data_inicio)) &
-            (df["Data da Análise"] <= pd.to_datetime(data_fim))
+            (df["Data da Análise"] <= pd.to_datetime(data_fim) + pd.Timedelta(days=1))
         ]
 
-        st.write(f"### Período: {data_inicio} até {data_fim}")
+        st.markdown(
+            f"### Período: {data_inicio.strftime('%d/%m/%Y')} até {data_fim.strftime('%d/%m/%Y')}"
+        )
 
         p1, p2, p3, p4 = st.columns(4)
 
@@ -267,12 +267,43 @@ if len(dados) > 1:
             st.download_button(
                 label="📥 Baixar Excel do Período",
                 data=arquivo_excel,
-                file_name=f"relatorio_{data_inicio}_ate_{data_fim}.xlsx",
+                file_name=f"relatorio_{data_inicio.strftime('%d-%m-%Y')}_ate_{data_fim.strftime('%d-%m-%Y')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
         else:
             st.warning("Nenhum registro encontrado nesse período.")
+
+    # ==============================
+    # DASHBOARD POR ANALISTA
+    # ==============================
+
+    st.divider()
+    st.subheader("👤 Dashboard por Analista")
+
+    df["MesAno"] = df["Data da Análise"].dt.strftime("%m/%Y")
+    meses_disponiveis = sorted(df["MesAno"].unique(), reverse=True)
+
+    mes_selecionado = st.selectbox("Selecionar Mês/Ano", meses_disponiveis)
+
+    df_mes = df[df["MesAno"] == mes_selecionado]
+
+    if not df_mes.empty:
+
+        resumo = df_mes.groupby("Analista").agg(
+            Total=("Número da CCB", "count"),
+            Em_Analise=("Status Analista", lambda x: (x == "Em Análise").sum()),
+            Pendentes=("Status Analista", lambda x: (x == "Análise Pendente").sum()),
+            Aprovadas=("Status Analista", lambda x: (x == "Análise Aprovada").sum()),
+            Reprovadas=("Status Analista", lambda x: (x == "Análise Reprovada").sum())
+        ).reset_index()
+
+        resumo = resumo.sort_values(by="Total", ascending=False)
+
+        st.dataframe(resumo, use_container_width=True)
+
+    else:
+        st.warning("Nenhum registro para esse mês.")
 
 else:
     st.write("Nenhum registro encontrado.")
