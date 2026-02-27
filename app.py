@@ -26,6 +26,17 @@ client = gspread.authorize(creds)
 sheet = client.open(SHEET_NAME).worksheet("BASE_CONTROLE")
 
 # ==============================
+# CACHE (🔥 AUMENTA VELOCIDADE)
+# ==============================
+
+@st.cache_data(ttl=30)
+def carregar_base():
+    return sheet.get_all_values()
+
+def limpar_cache():
+    carregar_base.clear()
+
+# ==============================
 # LOGIN
 # ==============================
 
@@ -46,7 +57,6 @@ USERS = {
 
 def login():
 
-    # Logo centralizada corretamente
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
         st.image("logo.png", width=220)
@@ -70,27 +80,40 @@ if "user" not in st.session_state:
 analista = st.session_state["user"]
 
 # ==============================
-# FUNÇÕES
+# FUNÇÕES PRINCIPAIS
 # ==============================
 
-def gerar_excel(df):
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-        df.to_excel(writer, index=False, sheet_name="Relatorio")
-    output.seek(0)
-    return output
-
-def carregar_base():
-    return sheet.get_all_values()
-
 def buscar_ccb(ccb):
-    dados = sheet.get_all_values()
+    dados = carregar_base()
     if len(dados) <= 1:
         return None
     for linha in dados[1:]:
         if str(linha[0]) == str(ccb):
             return linha
     return None
+
+def ordenar_planilha():
+
+    dados = sheet.get_all_values()
+    header = dados[0]
+    registros = dados[1:]
+
+    if not registros:
+        return
+
+    df = pd.DataFrame(registros, columns=header)
+
+    df["Data da Análise"] = pd.to_datetime(
+        df["Data da Análise"],
+        dayfirst=True,
+        errors="coerce"
+    )
+
+    df = df.sort_values(by="Data da Análise", ascending=False)
+
+    sheet.clear()
+    sheet.append_row(header)
+    sheet.append_rows(df.values.tolist())
 
 def assumir_ccb(ccb, valor, parceiro, analista):
 
@@ -112,7 +135,7 @@ def assumir_ccb(ccb, valor, parceiro, analista):
                 st.session_state["ccb_ativa"] = ccb
                 return "CONTINUAR"
 
-    sheet.append_row([
+    nova_linha = [
         ccb,
         valor,
         parceiro,
@@ -121,7 +144,13 @@ def assumir_ccb(ccb, valor, parceiro, analista):
         "Em Análise",
         analista,
         ""
-    ])
+    ]
+
+    # 🔥 INSERE NA LINHA 2 (sempre topo)
+    sheet.insert_row(nova_linha, index=2)
+
+    ordenar_planilha()
+    limpar_cache()
 
     st.session_state["ccb_ativa"] = ccb
     return "OK"
@@ -134,6 +163,10 @@ def finalizar_ccb(ccb, resultado, anotacoes):
         if str(linha[0]) == str(ccb):
             sheet.update_cell(idx, 6, resultado)
             sheet.update_cell(idx, 8, anotacoes)
+
+            ordenar_planilha()
+            limpar_cache()
+
             return "Finalizado"
 
     return "CCB não encontrada."
