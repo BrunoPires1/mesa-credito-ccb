@@ -16,8 +16,6 @@ st.set_page_config(layout="wide")
 SHEET_NAME = os.environ["SHEET_NAME"]
 google_creds = json.loads(os.environ["GOOGLE_CREDENTIALS"])
 
-LOGO_URL = "https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPOSITORIO/main/logo.png"
-
 scope = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive"
@@ -47,7 +45,6 @@ USERS = {
 }
 
 def login():
-    st.image(LOGO_URL, width=250)
     st.title("🔐 Login - Mesa de Crédito")
     user = st.text_input("Usuário")
     password = st.text_input("Senha", type="password")
@@ -69,11 +66,20 @@ analista = st.session_state["user"]
 # FUNÇÕES
 # ==============================
 
+def gerar_excel(df):
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        df.to_excel(writer, index=False, sheet_name="Relatorio")
+    output.seek(0)
+    return output
+
 def carregar_base():
     return sheet.get_all_values()
 
 def buscar_ccb(ccb):
     dados = sheet.get_all_values()
+    if len(dados) <= 1:
+        return None
     for linha in dados[1:]:
         if str(linha[0]) == str(ccb):
             return linha
@@ -95,14 +101,9 @@ def assumir_ccb(ccb, valor, parceiro, analista):
             if status in ["Análise Aprovada", "Análise Reprovada"]:
                 return "⚠️ Esta CCB já foi finalizada."
 
-            # MELHORIA: não exigir valor/parceiro se já existir
             if status in ["Em Análise", "Análise Pendente"]:
                 st.session_state["ccb_ativa"] = ccb
                 return "CONTINUAR"
-
-    # Nova CCB
-    if not valor or not parceiro:
-        return "Informe Valor Líquido e Parceiro."
 
     sheet.append_row([
         ccb,
@@ -134,14 +135,13 @@ def finalizar_ccb(ccb, resultado, anotacoes):
 # INTERFACE
 # ==============================
 
-st.image(LOGO_URL, width=200)
 st.title("📋 Mesa de Análise CCB")
 
 st.subheader("Assumir / Retomar Análise")
 
-ccb_input = st.text_input("Número da CCB", key="ccb_input")
-valor = st.text_input("Valor Líquido", key="valor_input")
-parceiro = st.text_input("Parceiro", key="parceiro_input")
+ccb_input = st.text_input("Número da CCB")
+valor = st.text_input("Valor Líquido")
+parceiro = st.text_input("Parceiro")
 
 if ccb_input:
     info = buscar_ccb(ccb_input)
@@ -181,19 +181,18 @@ if "ccb_ativa" in st.session_state:
 
     if st.button("Finalizar Análise"):
 
-        if resultado == "Análise Pendente" and not anotacoes:
-            st.error("Para Análise Pendente é obrigatório preencher Anotações.")
+        if resultado == "Análise Pendente":
+            if not anotacoes:
+                st.error("Para Análise Pendente é obrigatório preencher Anotações.")
+            else:
+                finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
+                st.warning("CCB marcada como Pendente.")
+                st.rerun()
+
         else:
             finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
-
             st.success("Análise finalizada com sucesso!")
-
-            # MELHORIA: limpar campos
             del st.session_state["ccb_ativa"]
-            st.session_state["ccb_input"] = ""
-            st.session_state["valor_input"] = ""
-            st.session_state["parceiro_input"] = ""
-
             st.rerun()
 
 # ==============================
@@ -219,35 +218,95 @@ if len(dados) > 1:
 
     df = df.dropna(subset=["Data da Análise"])
 
-    # ==============================
-    # GRÁFICO MÊS ATUAL (NOVO)
-    # ==============================
+    hoje = datetime.now().date()
+
+    col1, col2 = st.columns(2)
+
+    data_inicio = col1.date_input("Data Inicial", value=hoje, format="DD/MM/YYYY")
+    data_fim = col2.date_input("Data Final", value=hoje, format="DD/MM/YYYY")
+
+    df = df[
+        (df["Data da Análise"] >= pd.to_datetime(data_inicio)) &
+        (df["Data da Análise"] <= pd.to_datetime(data_fim) + pd.Timedelta(days=1))
+    ]
+
+    status_filtro = st.selectbox(
+        "Filtrar por Status",
+        ["Todos", "Em Análise", "Análise Pendente", "Análise Aprovada", "Análise Reprovada"]
+    )
+
+    if status_filtro != "Todos":
+        df = df[df["Status Analista"] == status_filtro]
+
+    df = df.sort_values(by="Data da Análise", ascending=False)
+
+    st.dataframe(df, use_container_width=True, hide_index=True)
+
+    # =====================================================
+    # 📈 RESUMO DO MÊS ATUAL (NOVO BLOCO INSERIDO AQUI)
+    # =====================================================
+
+    st.divider()
+    st.subheader("📈 Resumo do Mês Atual")
 
     mes_atual = datetime.now().strftime("%m/%Y")
     df["MesAno"] = df["Data da Análise"].dt.strftime("%m/%Y")
-    df_mes = df[df["MesAno"] == mes_atual]
 
-    if not df_mes.empty:
+    df_mes_atual = df[df["MesAno"] == mes_atual]
 
-        pendentes = df_mes[df_mes["Status Analista"] == "Análise Pendente"].shape[0]
-        aprovadas = df_mes[df_mes["Status Analista"] == "Análise Aprovada"].shape[0]
-        reprovadas = df_mes[df_mes["Status Analista"] == "Análise Reprovada"].shape[0]
-        total = df_mes.shape[0]
+    if not df_mes_atual.empty:
 
-        grafico_df = pd.DataFrame({
-            "Status": ["Pendentes", "Aprovadas", "Reprovadas", "Total"],
-            "Quantidade": [pendentes, aprovadas, reprovadas, total]
+        pendentes = df_mes_atual[df_mes_atual["Status Analista"] == "Análise Pendente"].shape[0]
+        aprovadas = df_mes_atual[df_mes_atual["Status Analista"] == "Análise Aprovada"].shape[0]
+        reprovadas = df_mes_atual[df_mes_atual["Status Analista"] == "Análise Reprovada"].shape[0]
+        total = df_mes_atual.shape[0]
+
+        resumo_mes = pd.DataFrame({
+            "Status": [
+                "Propostas Pendentes",
+                "Propostas Aprovadas",
+                "Propostas Reprovadas",
+                "Total de Propostas"
+            ],
+            "Quantidade": [
+                pendentes,
+                aprovadas,
+                reprovadas,
+                total
+            ]
         })
 
-        st.subheader(f"📈 Resumo Mês Atual ({mes_atual})")
-        st.bar_chart(grafico_df.set_index("Status"))
+        st.bar_chart(resumo_mes.set_index("Status"))
+
+    else:
+        st.info("Nenhuma proposta encontrada no mês atual.")
 
     # ==============================
-    # TABELA
+    # DASHBOARD POR ANALISTA
     # ==============================
 
-    df = df.sort_values(by="Data da Análise", ascending=False)
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.divider()
+    st.subheader("👤 Dashboard por Analista")
+
+    meses = sorted(df["MesAno"].dropna().unique(), reverse=True)
+
+    if len(meses) > 0:
+
+        mes_sel = st.selectbox("Selecionar Mês/Ano", meses)
+
+        df_mes = df[df["MesAno"] == mes_sel]
+
+        resumo = df_mes.groupby("Analista").agg(
+            Total=("Status Analista", "count"),
+            Em_Analise=("Status Analista", lambda x: (x == "Em Análise").sum()),
+            Pendentes=("Status Analista", lambda x: (x == "Análise Pendente").sum()),
+            Aprovadas=("Status Analista", lambda x: (x == "Análise Aprovada").sum()),
+            Reprovadas=("Status Analista", lambda x: (x == "Análise Reprovada").sum())
+        ).reset_index()
+
+        resumo = resumo.sort_values(by="Total", ascending=False)
+
+        st.dataframe(resumo, use_container_width=True, hide_index=True)
 
 else:
     st.write("Nenhum registro encontrado.")
