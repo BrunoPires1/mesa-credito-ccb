@@ -90,19 +90,18 @@ def assumir_ccb(ccb, valor, parceiro, analista):
 
     dados = sheet.get_all_values()
 
-    if len(dados) > 1:
-        for linha in dados[1:]:
-            numero = str(linha[0])
-            status = linha[5]
+    for linha in dados[1:]:
+        numero = str(linha[0])
+        status = linha[5]
 
-            if numero == str(ccb):
+        if numero == str(ccb):
 
-                if status in ["Análise Aprovada", "Análise Reprovada"]:
-                    return "⚠️ Esta CCB já foi finalizada."
+            if status in ["Análise Aprovada", "Análise Reprovada"]:
+                return "⚠️ Esta CCB já foi finalizada."
 
-                if status in ["Em Análise", "Análise Pendente"]:
-                    st.session_state["ccb_ativa"] = ccb
-                    return "CONTINUAR"
+            if status in ["Em Análise", "Análise Pendente"]:
+                st.session_state["ccb_ativa"] = ccb
+                return "CONTINUAR"
 
     sheet.append_row([
         ccb,
@@ -181,7 +180,6 @@ if "ccb_ativa" in st.session_state:
     if st.button("Salvar Resultado"):
 
         if resultado == "Análise Pendente":
-
             if not anotacoes:
                 st.error("Para Análise Pendente é obrigatório preencher Anotações.")
             else:
@@ -210,7 +208,14 @@ if len(dados) > 1:
     registros = dados[1:]
     df = pd.DataFrame(registros, columns=header)
 
-    df["Data da Análise"] = pd.to_datetime(df["Data da Análise"], dayfirst=True, errors="coerce")
+    # Converter data com segurança
+    df["Data da Análise"] = pd.to_datetime(
+        df["Data da Análise"],
+        dayfirst=True,
+        errors="coerce"
+    )
+
+    df = df.dropna(subset=["Data da Análise"])
 
     status_filtro = st.selectbox(
         "Filtrar por Status",
@@ -223,47 +228,51 @@ if len(dados) > 1:
     st.dataframe(df, use_container_width=True)
 
     # ==============================
-    # RELATÓRIO POR PERÍODO + EXPORTAÇÃO
+    # RELATÓRIO POR PERÍODO
     # ==============================
 
     st.divider()
     st.subheader("📅 Relatório por Período")
 
-    col_inicio, col_fim = st.columns(2)
+    if not df.empty:
 
-    data_inicio = col_inicio.date_input("Data Inicial", value=df["Data da Análise"].min())
-    data_fim = col_fim.date_input("Data Final", value=df["Data da Análise"].max())
+        data_min = df["Data da Análise"].min()
+        data_max = df["Data da Análise"].max()
 
-    df_periodo = df[
-        (df["Data da Análise"] >= pd.to_datetime(data_inicio)) &
-        (df["Data da Análise"] <= pd.to_datetime(data_fim))
-    ]
+        col_inicio, col_fim = st.columns(2)
 
-    st.write(f"### Período: {data_inicio} até {data_fim}")
+        data_inicio = col_inicio.date_input("Data Inicial", value=data_min)
+        data_fim = col_fim.date_input("Data Final", value=data_max)
 
-    p1, p2, p3, p4 = st.columns(4)
+        df_periodo = df[
+            (df["Data da Análise"] >= pd.to_datetime(data_inicio)) &
+            (df["Data da Análise"] <= pd.to_datetime(data_fim))
+        ]
 
-    p1.metric("Total", df_periodo.shape[0])
-    p2.metric("Aprovadas", df_periodo[df_periodo["Status Analista"] == "Análise Aprovada"].shape[0])
-    p3.metric("Reprovadas", df_periodo[df_periodo["Status Analista"] == "Análise Reprovada"].shape[0])
-    p4.metric("Pendentes", df_periodo[df_periodo["Status Analista"] == "Análise Pendente"].shape[0])
+        st.write(f"### Período: {data_inicio} até {data_fim}")
 
-    if not df_periodo.empty:
+        p1, p2, p3, p4 = st.columns(4)
 
-        st.bar_chart(df_periodo["Status Analista"].value_counts())
+        p1.metric("Total", df_periodo.shape[0])
+        p2.metric("Aprovadas", df_periodo[df_periodo["Status Analista"] == "Análise Aprovada"].shape[0])
+        p3.metric("Reprovadas", df_periodo[df_periodo["Status Analista"] == "Análise Reprovada"].shape[0])
+        p4.metric("Pendentes", df_periodo[df_periodo["Status Analista"] == "Análise Pendente"].shape[0])
 
-        arquivo_excel = gerar_excel(df_periodo)
+        if not df_periodo.empty:
 
-        st.download_button(
-            label="📥 Baixar Excel do Período",
-            data=arquivo_excel,
-            file_name=f"relatorio_{data_inicio}_ate_{data_fim}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+            st.bar_chart(df_periodo["Status Analista"].value_counts())
 
-    else:
-        st.warning("Nenhum registro encontrado nesse período.")
+            arquivo_excel = gerar_excel(df_periodo)
+
+            st.download_button(
+                label="📥 Baixar Excel do Período",
+                data=arquivo_excel,
+                file_name=f"relatorio_{data_inicio}_ate_{data_fim}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+        else:
+            st.warning("Nenhum registro encontrado nesse período.")
 
 else:
     st.write("Nenhum registro encontrado.")
-
