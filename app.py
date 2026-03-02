@@ -10,6 +10,45 @@ import io
 st.set_page_config(layout="wide")
 
 # ==============================
+# ESTILO PERSONALIZADO (CSS)
+# ==============================
+
+st.markdown("""
+    <style>
+    /* Fundo geral */
+    .stApp {
+        background-color: #f4f6f9;
+    }
+
+    /* Títulos */
+    h1, h2, h3 {
+        color: #0d3b66;
+    }
+
+    /* Botões */
+    .stButton>button {
+        background-color: #0d3b66;
+        color: white;
+        border-radius: 8px;
+        padding: 8px 16px;
+        border: none;
+    }
+
+    .stButton>button:hover {
+        background-color: #144e8c;
+        color: white;
+    }
+
+    /* Caixa principal */
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+
+    </style>
+""", unsafe_allow_html=True)
+
+# ==============================
 # CONFIGURAÇÕES
 # ==============================
 
@@ -348,6 +387,7 @@ if len(dados) > 1:
         resumo = resumo.sort_values(by="Total", ascending=False)
 
         st.dataframe(resumo, use_container_width=True, hide_index=True)
+
 
 
 
