@@ -15,33 +15,33 @@ st.set_page_config(layout="wide")
 # ==============================
 
 st.markdown("""
-    <style>
-    .stApp {
-        background-color: #f4f6f9;
-    }
+<style>
+.stApp {
+    background-color: #f4f6f9;
+}
 
-    h1, h2, h3 {
-        color: #0d3b66;
-    }
+h1, h2, h3 {
+    color: #0d3b66;
+}
 
-    .stButton>button {
-        background-color: #0d3b66;
-        color: white;
-        border-radius: 8px;
-        padding: 8px 16px;
-        border: none;
-    }
+.stButton>button {
+    background-color: #0d3b66;
+    color: white;
+    border-radius: 8px;
+    padding: 8px 16px;
+    border: none;
+}
 
-    .stButton>button:hover {
-        background-color: #144e8c;
-        color: white;
-    }
+.stButton>button:hover {
+    background-color: #144e8c;
+    color: white;
+}
 
-    .block-container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-    }
-    </style>
+.block-container {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+}
+</style>
 """, unsafe_allow_html=True)
 
 # ==============================
@@ -103,10 +103,7 @@ analista = st.session_state["user"]
 
 menu = st.sidebar.selectbox(
     "Menu",
-    [
-        "📋 Operação",
-        "📊 Acompanhamento"
-    ]
+    ["📋 Operação", "📊 Acompanhamento"]
 )
 
 st.sidebar.markdown("---")
@@ -139,7 +136,6 @@ def assumir_ccb(ccb, valor, parceiro, analista):
         status = linha[5]
 
         if numero == str(ccb):
-
             if status in ["Análise Aprovada", "Análise Reprovada"]:
                 return "⚠️ Esta CCB já foi finalizada."
 
@@ -164,24 +160,20 @@ def assumir_ccb(ccb, valor, parceiro, analista):
 
 def finalizar_ccb(ccb, resultado, anotacoes):
     dados = sheet.get_all_values()
-
     for idx, linha in enumerate(dados[1:], start=2):
         if str(linha[0]) == str(ccb):
             sheet.update(f"F{idx}", [[resultado]])
             sheet.update(f"H{idx}", [[anotacoes]])
             return "Finalizado"
-
     return "CCB não encontrada."
 
 # ==============================
-# 📋 OPERACAO
+# 📋 OPERAÇÃO
 # ==============================
 
 if menu == "📋 Operação":
 
     st.title("📋 Mesa de Análise CCB")
-
-    st.subheader("Assumir / Retomar Análise")
 
     ccb_input = st.text_input("Número da CCB")
     valor = st.text_input("Valor Líquido")
@@ -190,15 +182,10 @@ if menu == "📋 Operação":
     if ccb_input:
         info = buscar_ccb(ccb_input)
         if info:
-            st.info(f"""
-            📌 CCB já existente  
-            👤 Analista: {info[6]}  
-            📊 Status: {info[5]}
-            """)
+            st.info(f"📌 CCB já existente  \n👤 Analista: {info[6]}  \n📊 Status: {info[5]}")
 
     if st.button("Assumir Análise"):
         resposta = assumir_ccb(ccb_input, valor, parceiro, analista)
-
         if resposta == "OK":
             st.success("CCB criada e assumida com sucesso!")
         elif resposta == "CONTINUAR":
@@ -207,7 +194,6 @@ if menu == "📋 Operação":
             st.error(resposta)
 
     if "ccb_ativa" in st.session_state:
-
         st.divider()
         st.subheader(f"Finalizando CCB {st.session_state['ccb_ativa']}")
 
@@ -215,11 +201,9 @@ if menu == "📋 Operação":
             "Resultado",
             ["Análise Pendente", "Análise Aprovada", "Análise Reprovada"]
         )
-
         anotacoes = st.text_area("Anotações")
 
         if st.button("Finalizar Análise"):
-
             if resultado == "Análise Pendente" and not anotacoes:
                 st.error("Para Análise Pendente é obrigatório preencher Anotações.")
             else:
@@ -228,23 +212,16 @@ if menu == "📋 Operação":
                 del st.session_state["ccb_ativa"]
                 st.rerun()
 
-    # PAINEL GERAL
     st.divider()
     st.subheader("📊 Painel Geral")
 
     dados = carregar_base()
-
     if len(dados) > 1:
         header = dados[0]
         registros = dados[1:]
         df = pd.DataFrame(registros, columns=header)
 
-        df["Data da Análise"] = pd.to_datetime(
-            df["Data da Análise"],
-            dayfirst=True,
-            errors="coerce"
-        )
-
+        df["Data da Análise"] = pd.to_datetime(df["Data da Análise"], dayfirst=True, errors="coerce")
         df = df.dropna(subset=["Data da Análise"])
         df = df.sort_values(by="Data da Análise", ascending=False)
 
@@ -259,100 +236,79 @@ if menu == "📊 Acompanhamento":
     st.title("📊 Acompanhamento")
 
     dados = carregar_base()
-
     if len(dados) > 1:
 
         header = dados[0]
         registros = dados[1:]
         df = pd.DataFrame(registros, columns=header)
 
-        df["Data da Análise"] = pd.to_datetime(
-            df["Data da Análise"],
-            dayfirst=True,
-            errors="coerce"
-        )
-
+        df["Data da Análise"] = pd.to_datetime(df["Data da Análise"], dayfirst=True, errors="coerce")
         df = df.dropna(subset=["Data da Análise"])
 
-        # RESUMO DO MÊS
-       st.divider()
-    st.subheader("📈 Resumo do Mês Atual")
-
-    mes_atual = datetime.now().strftime("%m/%Y")
-    df["MesAno"] = df["Data da Análise"].dt.strftime("%m/%Y")
-
-    df_mes_atual = df[df["MesAno"] == mes_atual]
-
-    if not df_mes_atual.empty:
-
-        pendentes = df_mes_atual[df_mes_atual["Status Analista"] == "Análise Pendente"].shape[0]
-        aprovadas = df_mes_atual[df_mes_atual["Status Analista"] == "Análise Aprovada"].shape[0]
-        reprovadas = df_mes_atual[df_mes_atual["Status Analista"] == "Análise Reprovada"].shape[0]
-        total = df_mes_atual.shape[0]
-
-        resumo_mes = pd.DataFrame({
-            "Status": [
-                "Propostas Pendentes",
-                "Propostas Aprovadas",
-                "Propostas Reprovadas",
-                "Total de Propostas"
-            ],
-            "Quantidade": [
-                pendentes,
-                aprovadas,
-                reprovadas,
-                total
-            ]
-        })
-
-        import matplotlib.pyplot as plt
-
-        fig, ax = plt.subplots()
-
-        barras = ax.bar(resumo_mes["Status"], resumo_mes["Quantidade"])
-
-        # Adiciona rótulo (quantidade) acima das barras
-        for barra in barras:
-            altura = barra.get_height()
-            ax.text(
-                barra.get_x() + barra.get_width() / 2,
-                altura,
-                f'{int(altura)}',
-                ha='center',
-                va='bottom'
-            )
-
-        ax.set_ylabel("Quantidade")
-        ax.set_title("Resumo do Mês Atual")
-        plt.xticks(rotation=45)
-
-        st.pyplot(fig)
-
-    else:
-        st.info("Nenhuma proposta encontrada no mês atual.")
-
-        # DASHBOARD POR ANALISTA
         st.divider()
-    st.subheader("👤 Dashboard por Analista")
+        st.subheader("📈 Resumo do Mês Atual")
 
-    meses = sorted(df["MesAno"].dropna().unique(), reverse=True)
+        mes_atual = datetime.now().strftime("%m/%Y")
+        df["MesAno"] = df["Data da Análise"].dt.strftime("%m/%Y")
+        df_mes_atual = df[df["MesAno"] == mes_atual]
 
-    if len(meses) > 0:
+        if not df_mes_atual.empty:
 
-        mes_sel = st.selectbox("Selecionar Mês/Ano", meses)
+            pendentes = df_mes_atual[df_mes_atual["Status Analista"] == "Análise Pendente"].shape[0]
+            aprovadas = df_mes_atual[df_mes_atual["Status Analista"] == "Análise Aprovada"].shape[0]
+            reprovadas = df_mes_atual[df_mes_atual["Status Analista"] == "Análise Reprovada"].shape[0]
+            total = df_mes_atual.shape[0]
 
-        df_mes = df[df["MesAno"] == mes_sel]
+            resumo_mes = pd.DataFrame({
+                "Status": [
+                    "Propostas Pendentes",
+                    "Propostas Aprovadas",
+                    "Propostas Reprovadas",
+                    "Total de Propostas"
+                ],
+                "Quantidade": [
+                    pendentes,
+                    aprovadas,
+                    reprovadas,
+                    total
+                ]
+            })
 
-        resumo = df_mes.groupby("Analista").agg(
-            Total=("Status Analista", "count"),
-            Em_Analise=("Status Analista", lambda x: (x == "Em Análise").sum()),
-            Pendentes=("Status Analista", lambda x: (x == "Análise Pendente").sum()),
-            Aprovadas=("Status Analista", lambda x: (x == "Análise Aprovada").sum()),
-            Reprovadas=("Status Analista", lambda x: (x == "Análise Reprovada").sum())
-        ).reset_index()
+            fig, ax = plt.subplots()
+            barras = ax.bar(resumo_mes["Status"], resumo_mes["Quantidade"])
 
-        resumo = resumo.sort_values(by="Total", ascending=False)
+            for barra in barras:
+                altura = barra.get_height()
+                ax.text(
+                    barra.get_x() + barra.get_width() / 2,
+                    altura,
+                    f'{int(altura)}',
+                    ha='center',
+                    va='bottom'
+                )
 
-        st.dataframe(resumo, use_container_width=True, hide_index=True)
+            plt.xticks(rotation=45)
+            st.pyplot(fig)
 
+        else:
+            st.info("Nenhuma proposta encontrada no mês atual.")
 
+        st.divider()
+        st.subheader("👤 Dashboard por Analista")
+
+        meses = sorted(df["MesAno"].dropna().unique(), reverse=True)
+
+        if len(meses) > 0:
+            mes_sel = st.selectbox("Selecionar Mês/Ano", meses)
+            df_mes = df[df["MesAno"] == mes_sel]
+
+            resumo = df_mes.groupby("Analista").agg(
+                Total=("Status Analista", "count"),
+                Em_Analise=("Status Analista", lambda x: (x == "Em Análise").sum()),
+                Pendentes=("Status Analista", lambda x: (x == "Análise Pendente").sum()),
+                Aprovadas=("Status Analista", lambda x: (x == "Análise Aprovada").sum()),
+                Reprovadas=("Status Analista", lambda x: (x == "Análise Reprovada").sum())
+            ).reset_index()
+
+            resumo = resumo.sort_values(by="Total", ascending=False)
+            st.dataframe(resumo, use_container_width=True, hide_index=True)
