@@ -10,6 +10,45 @@ import io
 st.set_page_config(layout="wide")
 
 # ==============================
+# ESTILO PERSONALIZADO (CSS)
+# ==============================
+
+st.markdown("""
+    <style>
+    /* Fundo geral */
+    .stApp {
+        background-color: #f4f6f9;
+    }
+
+    /* Títulos */
+    h1, h2, h3 {
+        color: #0d3b66;
+    }
+
+    /* Botões */
+    .stButton>button {
+        background-color: #0d3b66;
+        color: white;
+        border-radius: 8px;
+        padding: 8px 16px;
+        border: none;
+    }
+
+    .stButton>button:hover {
+        background-color: #144e8c;
+        color: white;
+    }
+
+    /* Caixa principal */
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+
+    </style>
+""", unsafe_allow_html=True)
+
+# ==============================
 # CONFIGURAÇÕES
 # ==============================
 
@@ -296,7 +335,28 @@ if len(dados) > 1:
             ]
         })
 
-        st.bar_chart(resumo_mes.set_index("Status"))
+        import matplotlib.pyplot as plt
+
+        fig, ax = plt.subplots()
+
+        barras = ax.bar(resumo_mes["Status"], resumo_mes["Quantidade"])
+
+        # Adiciona rótulo (quantidade) acima das barras
+        for barra in barras:
+            altura = barra.get_height()
+            ax.text(
+                barra.get_x() + barra.get_width() / 2,
+                altura,
+                f'{int(altura)}',
+                ha='center',
+                va='bottom'
+            )
+
+        ax.set_ylabel("Quantidade")
+        ax.set_title("Resumo do Mês Atual")
+        plt.xticks(rotation=45)
+
+        st.pyplot(fig)
 
     else:
         st.info("Nenhuma proposta encontrada no mês atual.")
@@ -327,5 +387,3 @@ if len(dados) > 1:
         resumo = resumo.sort_values(by="Total", ascending=False)
 
         st.dataframe(resumo, use_container_width=True, hide_index=True)
-
-
