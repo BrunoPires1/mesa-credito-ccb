@@ -305,12 +305,25 @@ if menu == "📊 Acompanhamento":
 
         # DASHBOARD POR ANALISTA
         st.divider()
-        st.subheader("👤 Dashboard por Analista")
+    st.subheader("👤 Dashboard por Analista")
 
-        resumo = df.groupby("Analista").agg(
-            Total=("Status Analista", "count")
+    meses = sorted(df["MesAno"].dropna().unique(), reverse=True)
+
+    if len(meses) > 0:
+
+        mes_sel = st.selectbox("Selecionar Mês/Ano", meses)
+
+        df_mes = df[df["MesAno"] == mes_sel]
+
+        resumo = df_mes.groupby("Analista").agg(
+            Total=("Status Analista", "count"),
+            Em_Analise=("Status Analista", lambda x: (x == "Em Análise").sum()),
+            Pendentes=("Status Analista", lambda x: (x == "Análise Pendente").sum()),
+            Aprovadas=("Status Analista", lambda x: (x == "Análise Aprovada").sum()),
+            Reprovadas=("Status Analista", lambda x: (x == "Análise Reprovada").sum())
         ).reset_index()
 
         resumo = resumo.sort_values(by="Total", ascending=False)
 
         st.dataframe(resumo, use_container_width=True, hide_index=True)
+
