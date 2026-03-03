@@ -57,14 +57,25 @@ scope = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-creds = ServiceAccountCredentials.from_json_keyfile_dict(google_creds, scope)
-client = gspread.authorize(creds)
-sheet = client.open(SHEET_NAME).worksheet("BASE_CONTROLE")
+@st.cache_resource
+def conectar_google():
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(google_creds, scope)
+    client = gspread.authorize(creds)
+    return client
+
+client = conectar_google()
+
+@st.cache_resource
+def carregar_sheet():
+    return client.open(SHEET_NAME).worksheet("BASE_CONTROLE")
+
+sheet = carregar_sheet()
 
 # ==============================
 # LOGIN
 # ==============================
 
+@st.cache_data(ttl=60)
 def carregar_usuarios():
     aba_usuarios = client.open(SHEET_NAME).worksheet("USUARIOS")
     dados = aba_usuarios.get_all_values()
@@ -136,6 +147,7 @@ if st.sidebar.button("🚪 Sair"):
 # FUNÇÕES
 # ==============================
 
+@st.cache_data(ttl=60)
 def carregar_base():
     return sheet.get_all_values()
 
@@ -401,3 +413,4 @@ if menu == "🔐 Administração":
                 aba_usuarios.delete_rows(idx + 1)
                 st.success("Usuário removido com sucesso!")
                 st.rerun()
+
