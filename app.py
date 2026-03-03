@@ -162,7 +162,6 @@ def assumir_ccb(ccb, valor, parceiro, analista, status_bankerize):
         parceiro,
         datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
         status_bankerize,  # 🔥 AGORA VEM DO SELECTBOX
-        "Assinatura Reprovada",
         "Em Análise",
         analista,
         ""
@@ -438,6 +437,7 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
 
 
