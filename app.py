@@ -124,6 +124,13 @@ st.sidebar.markdown("---")
 st.sidebar.write(f"👤 Usuário: **{analista}**")
 st.sidebar.write(f"🎯 Perfil: **{perfil}**")
 
+st.sidebar.markdown("---")
+
+if st.sidebar.button("🚪 Sair"):
+    del st.session_state["user"]
+    del st.session_state["perfil"]
+    st.rerun()
+
 # ==============================
 # FUNÇÕES
 # ==============================
@@ -383,4 +390,5 @@ if menu == "🔐 Administração":
                 aba_usuarios.delete_rows(idx + 1)
                 st.success("Usuário removido com sucesso!")
                 st.rerun()
+
 
