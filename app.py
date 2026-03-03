@@ -65,12 +65,11 @@ sheet = client.open(SHEET_NAME).worksheet("BASE_CONTROLE")
 # ==============================
 
 USERS = {
-    "Bruno.Pires": {"senha": "831227", "perfil": "Supervisor"},
+    "Bruno.Pires": {"senha": "103488", "perfil": "Supervisor"},
     "Fabio.Moura": {"senha": "108026", "perfil": "Supervisor"},
 
     "Amanda.Fiorio": {"senha": "135433", "perfil": "Operador"},
     "Andressa.Silva": {"senha": "152909", "perfil": "Operador"},
-    "Antonio.Aymi": {"senha": "016912", "perfil": "Operador"},
     "Hugo.Poltronieri": {"senha": "104830", "perfil": "Operador"},
     "Juliana.Santos": {"senha": "442908", "perfil": "Operador"},
     "KauaFantoni": {"senha": "183349", "perfil": "Operador"},
@@ -373,3 +372,4 @@ if menu == "🔐 Administração":
         if usuario_excluir in USERS:
             del USERS[usuario_excluir]
             st.success("Usuário excluído com sucesso!")
+
