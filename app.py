@@ -69,13 +69,15 @@ def carregar_usuarios():
     dados = aba_usuarios.get_all_values()
 
     usuarios = {}
+
     for linha in dados[1:]:
-        if len(linha) >= 2:
-            usuarios[linha[0]] = linha[1]
+        if len(linha) >= 3:
+            usuarios[linha[0]] = {
+                "senha": linha[1],
+                "perfil": linha[2]
+            }
 
     return usuarios
-
-ADMINS = ["Bruno.Pires", "Fabio.Moura"]
 
 USERS = carregar_usuarios()
 
@@ -85,29 +87,42 @@ def login():
     password = st.text_input("Senha", type="password")
 
     if st.button("Entrar"):
-        if user in USERS and USERS[user] == password:
-            st.session_state["user"] = user
-            st.rerun()
+
+        if user in USERS:
+
+            if USERS[user]["senha"] == password:
+
+                st.session_state["user"] = user
+                st.session_state["perfil"] = USERS[user]["perfil"]
+
+                st.rerun()
+            else:
+                st.error("Usuário ou senha inválidos")
         else:
             st.error("Usuário ou senha inválidos")
 
+# 🔐 BLOQUEIO DE ACESSO
 if "user" not in st.session_state:
     login()
     st.stop()
 
 analista = st.session_state["user"]
+perfil = st.session_state["perfil"]
 
 # ==============================
 # MENU LATERAL
 # ==============================
 
-menu = st.sidebar.selectbox(
-    "Menu",
-    ["📋 Operação", "📊 Acompanhamento", "🔐 Administração"]
-)
+menu_opcoes = ["📋 Operação", "📊 Acompanhamento"]
+
+if perfil == "Supervisor":
+    menu_opcoes.append("🔐 Administração")
+
+menu = st.sidebar.selectbox("Menu", menu_opcoes)
 
 st.sidebar.markdown("---")
 st.sidebar.write(f"👤 Usuário: **{analista}**")
+st.sidebar.write(f"🎯 Perfil: **{perfil}**")
 
 # ==============================
 # FUNÇÕES
@@ -319,8 +334,8 @@ if menu == "📊 Acompanhamento":
 
 if menu == "🔐 Administração":
 
-    if analista not in ADMINS:
-        st.warning("Acesso restrito a administradores.")
+    if perfil != "Supervisor":
+        st.warning("Acesso restrito a Supervisores.")
         st.stop()
 
     st.title("🔐 Administração de Usuários")
@@ -338,10 +353,19 @@ if menu == "🔐 Administração":
 
     novo_user = st.text_input("Novo Usuário")
     nova_senha = st.text_input("Senha", type="password")
+    
+    perfil_novo = st.selectbox(
+        "Perfil",
+        ["Operador", "Supervisor"]
+)
 
     if st.button("Adicionar Usuário"):
         if novo_user and nova_senha:
-            aba_usuarios.append_row([novo_user, nova_senha])
+            aba_usuarios.append_row([
+                novo_user,
+                nova_senha,
+                perfil_novo
+    ])
             st.success("Usuário adicionado com sucesso!")
             st.rerun()
         else:
@@ -359,3 +383,4 @@ if menu == "🔐 Administração":
                 aba_usuarios.delete_rows(idx + 1)
                 st.success("Usuário removido com sucesso!")
                 st.rerun()
+
