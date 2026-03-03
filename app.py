@@ -244,11 +244,15 @@ if menu == "📋 Operação":
         if st.button("Finalizar Análise"):
             if resultado == "Análise Pendente" and not anotacoes:
                 st.error("Para Análise Pendente é obrigatório preencher Anotações.")
-            else:
-                finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
-                st.success("Análise finalizada com sucesso!")
-                del st.session_state["ccb_ativa"]
-                st.rerun()
+        else:
+            finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
+
+            # 🔥 LIMPA CACHE PARA ATUALIZAR PAINEL
+            st.cache_data.clear()
+
+            st.success("Análise finalizada com sucesso!")
+            del st.session_state["ccb_ativa"]
+            st.rerun()
 
     st.divider()
     st.subheader("📊 Painel Geral")
@@ -413,4 +417,5 @@ if menu == "🔐 Administração":
                 aba_usuarios.delete_rows(idx + 1)
                 st.success("Usuário removido com sucesso!")
                 st.rerun()
+
 
