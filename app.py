@@ -7,6 +7,7 @@ from datetime import datetime
 import pandas as pd
 import io
 import matplotlib.pyplot as plt
+import hashlib
 
 st.set_page_config(layout="wide")
 
@@ -359,3 +360,4 @@ if menu == "🔐 Administração":
                 aba_usuarios.delete_rows(idx + 1)
                 st.success("Usuário removido com sucesso!")
                 st.rerun()
+
