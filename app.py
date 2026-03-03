@@ -59,39 +59,46 @@ scope = [
 creds = ServiceAccountCredentials.from_json_keyfile_dict(google_creds, scope)
 client = gspread.authorize(creds)
 sheet = client.open(SHEET_NAME).worksheet("BASE_CONTROLE")
+sheet_usuarios = client.open(SHEET_NAME).worksheet("USUARIOS")
 
 # ==============================
 # LOGIN
 # ==============================
 
-USERS = {
-    "Bruno.Pires": {"senha": "103488", "perfil": "Supervisor"},
-    "Fabio.Moura": {"senha": "108026", "perfil": "Supervisor"},
+def carregar_usuarios():
+    dados = sheet_usuarios.get_all_values()
 
-    "Amanda.Fiorio": {"senha": "135433", "perfil": "Operador"},
-    "Andressa.Silva": {"senha": "152909", "perfil": "Operador"},
-    "Hugo.Poltronieri": {"senha": "104830", "perfil": "Operador"},
-    "Juliana.Santos": {"senha": "442908", "perfil": "Operador"},
-    "KauaFantoni": {"senha": "183349", "perfil": "Operador"},
-    "Lorrayne.Falcao": {"senha": "145472", "perfil": "Operador"},
-    "Matheus.Machado": {"senha": "132300", "perfil": "Operador"},
-    "Nathalia.Moreira": {"senha": "189966", "perfil": "Operador"},
-    "Ulisses.Neto": {"senha": "119715", "perfil": "Operador"},
-}
+    usuarios_dict = {}
+
+    if len(dados) > 1:
+        for linha in dados[1:]:
+            usuarios_dict[linha[0]] = {
+                "senha": linha[1],
+                "perfil": linha[2]
+            }
+
+    return usuarios_dict
 
 def login():
     st.title("🔐 Login - Mesa de Crédito")
+
     user = st.text_input("Usuário")
     password = st.text_input("Senha", type="password")
 
     if st.button("Entrar"):
-        if user in USERS and USERS[user]["senha"] == password:
+
+        usuarios = carregar_usuarios()
+
+        if user in usuarios and usuarios[user]["senha"] == password:
+
             st.session_state["user"] = user
-            st.session_state["perfil"] = USERS[user]["perfil"]
+            st.session_state["perfil"] = usuarios[user]["perfil"]
+
             st.rerun()
+
         else:
             st.error("Usuário ou senha inválidos")
-
+        
 if "user" not in st.session_state:
     login()
     st.stop()
@@ -329,21 +336,22 @@ if menu == "🔐 Administração":
 
     st.title("🔐 Administração de Usuários")
 
-    st.subheader("Usuários Cadastrados")
+    usuarios = carregar_usuarios()
 
-    lista_usuarios = []
-
-    for nome, dados in USERS.items():
-        lista_usuarios.append({
+    # LISTAR USUÁRIOS
+    lista = []
+    for nome, dados in usuarios.items():
+        lista.append({
             "Usuário": nome,
             "Perfil": dados["perfil"]
         })
 
-    df_usuarios = pd.DataFrame(lista_usuarios)
-
-    st.dataframe(df_usuarios, use_container_width=True, hide_index=True)
+    df_users = pd.DataFrame(lista)
+    st.dataframe(df_users, use_container_width=True, hide_index=True)
 
     st.divider()
+
+    # ADICIONAR USUÁRIO
     st.subheader("Adicionar Novo Usuário")
 
     novo_usuario = st.text_input("Nome do Usuário")
@@ -351,24 +359,38 @@ if menu == "🔐 Administração":
     novo_perfil = st.selectbox("Perfil", ["Operador", "Supervisor"])
 
     if st.button("Cadastrar Usuário"):
+
         if novo_usuario and nova_senha:
-            USERS[novo_usuario] = {
-                "senha": nova_senha,
-                "perfil": novo_perfil
-            }
+
+            sheet_usuarios.append_row([
+                novo_usuario,
+                nova_senha,
+                novo_perfil
+            ])
+
             st.success("Usuário cadastrado com sucesso!")
+            st.rerun()
         else:
             st.error("Preencha todos os campos.")
 
     st.divider()
+
+    # EXCLUIR USUÁRIO
     st.subheader("Excluir Usuário")
 
     usuario_excluir = st.selectbox(
         "Selecionar Usuário para Excluir",
-        list(USERS.keys())
+        list(usuarios.keys())
     )
 
     if st.button("Excluir Usuário"):
-        if usuario_excluir in USERS:
-            del USERS[usuario_excluir]
-            st.success("Usuário excluído com sucesso!")
+
+        dados = sheet_usuarios.get_all_values()
+
+        for idx, linha in enumerate(dados[1:], start=2):
+            if linha[0] == usuario_excluir:
+                sheet_usuarios.delete_rows(idx)
+                break
+
+        st.success("Usuário excluído com sucesso!")
+        st.rerun()
