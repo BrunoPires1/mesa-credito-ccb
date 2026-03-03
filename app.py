@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 
 st.set_page_config(layout="wide")
 
+st.write("VERSÃO NOVA 03/03 - TESTE")
+
 # ==============================
 # ESTILO PERSONALIZADO (CSS)
 # ==============================
@@ -223,20 +225,37 @@ if menu == "📋 Operação":
                 del st.session_state["ccb_ativa"]
                 st.rerun()
 
+    # ==============================
+    # 📊 PAINEL GERAL
+    # ==============================
+
     st.divider()
     st.subheader("📊 Painel Geral")
 
     dados = carregar_base()
+
     if len(dados) > 1:
+
         header = dados[0]
         registros = dados[1:]
         df = pd.DataFrame(registros, columns=header)
 
-        df["Data da Análise"] = pd.to_datetime(df["Data da Análise"], dayfirst=True, errors="coerce")
+        df["Data da Análise"] = pd.to_datetime(
+            df["Data da Análise"],
+            dayfirst=True,
+            errors="coerce"
+        )
+
         df = df.dropna(subset=["Data da Análise"])
         df = df.sort_values(by="Data da Análise", ascending=False)
 
+        # FORMATO BRASILEIRO
+        df["Data da Análise"] = df["Data da Análise"].dt.strftime("%d/%m/%Y %H:%M:%S")
+
         st.dataframe(df, use_container_width=True, hide_index=True)
+
+    else:
+        st.info("Nenhum registro encontrado.")
 
 # ==============================
 # 📊 ACOMPANHAMENTO
@@ -394,3 +413,4 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
