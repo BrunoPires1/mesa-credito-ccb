@@ -65,18 +65,19 @@ sheet = client.open(SHEET_NAME).worksheet("BASE_CONTROLE")
 # ==============================
 
 USERS = {
-    "Bruno.Pires": "831227",
-    "Amanda.Fiorio": "135433",
-    "Andressa.Silva": "152909",
-    "Antonio.Aymi": "016912",
-    "Fabio.Moura": "108026",
-    "Hugo.Poltronieri": "104830",
-    "Juliana.Santos": "442908",
-    "KauaFantoni": "183349",
-    "Lorrayne.Falcao": "145472",
-    "Matheus.Machado": "132300",
-    "Nathalia.Moreira": "189966",
-    "Ulisses.Neto": "119715",
+    "Bruno.Pires": {"senha": "831227", "perfil": "Supervisor"},
+    "Fabio.Moura": {"senha": "108026", "perfil": "Supervisor"},
+
+    "Amanda.Fiorio": {"senha": "135433", "perfil": "Operador"},
+    "Andressa.Silva": {"senha": "152909", "perfil": "Operador"},
+    "Antonio.Aymi": {"senha": "016912", "perfil": "Operador"},
+    "Hugo.Poltronieri": {"senha": "104830", "perfil": "Operador"},
+    "Juliana.Santos": {"senha": "442908", "perfil": "Operador"},
+    "KauaFantoni": {"senha": "183349", "perfil": "Operador"},
+    "Lorrayne.Falcao": {"senha": "145472", "perfil": "Operador"},
+    "Matheus.Machado": {"senha": "132300", "perfil": "Operador"},
+    "Nathalia.Moreira": {"senha": "189966", "perfil": "Operador"},
+    "Ulisses.Neto": {"senha": "119715", "perfil": "Operador"},
 }
 
 def login():
@@ -85,8 +86,9 @@ def login():
     password = st.text_input("Senha", type="password")
 
     if st.button("Entrar"):
-        if user in USERS and USERS[user] == password:
+        if user in USERS and USERS[user]["senha"] == password:
             st.session_state["user"] = user
+            st.session_state["perfil"] = USERS[user]["perfil"]
             st.rerun()
         else:
             st.error("Usuário ou senha inválidos")
@@ -101,13 +103,16 @@ analista = st.session_state["user"]
 # MENU LATERAL
 # ==============================
 
-menu = st.sidebar.selectbox(
-    "Menu",
-    ["📋 Operação", "📊 Acompanhamento"]
-)
+opcoes_menu = ["📋 Operação", "📊 Acompanhamento"]
+
+if st.session_state["perfil"] == "Supervisor":
+    opcoes_menu.append("🔐 Administração")
+
+menu = st.sidebar.selectbox("Menu", opcoes_menu)
 
 st.sidebar.markdown("---")
 st.sidebar.write(f"👤 Usuário: **{analista}**")
+st.sidebar.write(f"🔑 Perfil: **{st.session_state['perfil']}**")
 
 # ==============================
 # FUNÇÕES
@@ -312,3 +317,59 @@ if menu == "📊 Acompanhamento":
 
             resumo = resumo.sort_values(by="Total", ascending=False)
             st.dataframe(resumo, use_container_width=True, hide_index=True)
+
+# ==============================
+# 🔐 ADMINISTRAÇÃO
+# ==============================
+
+if menu == "🔐 Administração":
+
+    if st.session_state["perfil"] != "Supervisor":
+        st.warning("Acesso restrito a Supervisores.")
+        st.stop()
+
+    st.title("🔐 Administração de Usuários")
+
+    st.subheader("Usuários Cadastrados")
+
+    lista_usuarios = []
+
+    for nome, dados in USERS.items():
+        lista_usuarios.append({
+            "Usuário": nome,
+            "Perfil": dados["perfil"]
+        })
+
+    df_usuarios = pd.DataFrame(lista_usuarios)
+
+    st.dataframe(df_usuarios, use_container_width=True, hide_index=True)
+
+    st.divider()
+    st.subheader("Adicionar Novo Usuário")
+
+    novo_usuario = st.text_input("Nome do Usuário")
+    nova_senha = st.text_input("Senha", type="password")
+    novo_perfil = st.selectbox("Perfil", ["Operador", "Supervisor"])
+
+    if st.button("Cadastrar Usuário"):
+        if novo_usuario and nova_senha:
+            USERS[novo_usuario] = {
+                "senha": nova_senha,
+                "perfil": novo_perfil
+            }
+            st.success("Usuário cadastrado com sucesso!")
+        else:
+            st.error("Preencha todos os campos.")
+
+    st.divider()
+    st.subheader("Excluir Usuário")
+
+    usuario_excluir = st.selectbox(
+        "Selecionar Usuário para Excluir",
+        list(USERS.keys())
+    )
+
+    if st.button("Excluir Usuário"):
+        if usuario_excluir in USERS:
+            del USERS[usuario_excluir]
+            st.success("Usuário excluído com sucesso!")
