@@ -222,8 +222,10 @@ if menu == "📋 Operação":
         if info:
             st.info(f"📌 CCB já existente  \n👤 Analista: {info[6]}  \n📊 Status: {info[5]}")
 
-        if st.button("Assumir Análise"):
-            resposta = assumir_ccb(ccb_input, valor, parceiro, analista)
+    # 🔥 BOTÃO ASSUMIR
+    if st.button("Assumir Análise"):
+
+        resposta = assumir_ccb(ccb_input, valor, parceiro, analista)
 
         if resposta == "OK":
             st.success("CCB criada e assumida com sucesso!")
@@ -236,7 +238,9 @@ if menu == "📋 Operação":
         else:
             st.error(resposta)
 
+    # 🔥 BLOCO FINALIZAÇÃO
     if "ccb_ativa" in st.session_state:
+
         st.divider()
         st.subheader(f"Finalizando CCB {st.session_state['ccb_ativa']}")
 
@@ -244,21 +248,24 @@ if menu == "📋 Operação":
             "Resultado",
             ["Análise Pendente", "Análise Aprovada", "Análise Reprovada"]
         )
+
         anotacoes = st.text_area("Anotações")
 
         if st.button("Finalizar Análise"):
+
             if resultado == "Análise Pendente" and not anotacoes:
                 st.error("Para Análise Pendente é obrigatório preencher Anotações.")
-        else:
-            finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
+            else:
+                finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
 
-            # 🔥 LIMPA CACHE PARA ATUALIZAR PAINEL
-            st.cache_data.clear()
+                # 🔥 Limpa cache
+                st.cache_data.clear()
 
-            st.success("Análise finalizada com sucesso!")
-            del st.session_state["ccb_ativa"]
-            st.rerun()
+                st.success("Análise finalizada com sucesso!")
+                del st.session_state["ccb_ativa"]
+                st.rerun()
 
+    # 🔥 PAINEL GERAL
     st.divider()
     st.subheader("📊 Painel Geral")
 
@@ -268,12 +275,17 @@ if menu == "📋 Operação":
         registros = dados[1:]
         df = pd.DataFrame(registros, columns=header)
 
-        df["Data da Análise"] = pd.to_datetime(df["Data da Análise"], dayfirst=True, errors="coerce")
+        df["Data da Análise"] = pd.to_datetime(
+            df["Data da Análise"],
+            dayfirst=True,
+            errors="coerce"
+        )
+
         df = df.dropna(subset=["Data da Análise"])
         df = df.sort_values(by="Data da Análise", ascending=False)
 
         df["Data da Análise"] = df["Data da Análise"].dt.strftime("%d/%m/%Y %H:%M:%S")
-        
+
         st.dataframe(df, use_container_width=True, hide_index=True)
 
 # ==============================
@@ -422,6 +434,4 @@ if menu == "🔐 Administração":
                 aba_usuarios.delete_rows(idx + 1)
                 st.success("Usuário removido com sucesso!")
                 st.rerun()
-
-
 
