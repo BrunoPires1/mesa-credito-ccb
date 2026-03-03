@@ -340,7 +340,6 @@ if menu == "🔐 Administração":
 
     # LISTAR USUÁRIOS
     lista = []
-
     for nome, dados in usuarios.items():
         lista.append({
             "Usuário": nome,
@@ -395,4 +394,3 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
-
