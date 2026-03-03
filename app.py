@@ -64,20 +64,20 @@ sheet = client.open(SHEET_NAME).worksheet("BASE_CONTROLE")
 # LOGIN
 # ==============================
 
-USERS = {
-    "Bruno.Pires": "831227",
-    "Amanda.Fiorio": "135433",
-    "Andressa.Silva": "152909",
-    "Antonio.Aymi": "016912",
-    "Fabio.Moura": "108026",
-    "Hugo.Poltronieri": "104830",
-    "Juliana.Santos": "442908",
-    "KauaFantoni": "183349",
-    "Lorrayne.Falcao": "145472",
-    "Matheus.Machado": "132300",
-    "Nathalia.Moreira": "189966",
-    "Ulisses.Neto": "119715",
-}
+def carregar_usuarios():
+    aba_usuarios = client.open(SHEET_NAME).worksheet("USUARIOS")
+    dados = aba_usuarios.get_all_values()
+
+    usuarios = {}
+    for linha in dados[1:]:
+        if len(linha) >= 2:
+            usuarios[linha[0]] = linha[1]
+
+    return usuarios
+
+ADMINS = ["Bruno.Pires", "Fabio.Moura"]
+
+USERS = carregar_usuarios()
 
 def login():
     st.title("🔐 Login - Mesa de Crédito")
@@ -103,7 +103,7 @@ analista = st.session_state["user"]
 
 menu = st.sidebar.selectbox(
     "Menu",
-    ["📋 Operação", "📊 Acompanhamento"]
+    ["📋 Operação", "📊 Acompanhamento", "🔐 Administração"]
 )
 
 st.sidebar.markdown("---")
@@ -312,3 +312,50 @@ if menu == "📊 Acompanhamento":
 
             resumo = resumo.sort_values(by="Total", ascending=False)
             st.dataframe(resumo, use_container_width=True, hide_index=True)
+
+# ==============================
+# 🔐 ADMINISTRAÇÃO
+# ==============================
+
+if menu == "🔐 Administração":
+
+    if analista not in ADMINS:
+        st.warning("Acesso restrito a administradores.")
+        st.stop()
+
+    st.title("🔐 Administração de Usuários")
+
+    aba_usuarios = client.open(SHEET_NAME).worksheet("USUARIOS")
+    dados = aba_usuarios.get_all_values()
+
+    df_users = pd.DataFrame(dados[1:], columns=dados[0])
+
+    st.subheader("Usuários Atuais")
+    st.dataframe(df_users, use_container_width=True, hide_index=True)
+
+    st.divider()
+    st.subheader("Adicionar Novo Usuário")
+
+    novo_user = st.text_input("Novo Usuário")
+    nova_senha = st.text_input("Senha", type="password")
+
+    if st.button("Adicionar Usuário"):
+        if novo_user and nova_senha:
+            aba_usuarios.append_row([novo_user, nova_senha])
+            st.success("Usuário adicionado com sucesso!")
+            st.rerun()
+        else:
+            st.error("Preencha todos os campos.")
+
+    st.divider()
+    st.subheader("Remover Usuário")
+
+    usuario_remover = st.selectbox("Selecionar usuário", df_users["Usuario"])
+
+    if st.button("Remover Usuário"):
+        linhas = aba_usuarios.get_all_values()
+        for idx, linha in enumerate(linhas):
+            if linha[0] == usuario_remover:
+                aba_usuarios.delete_rows(idx + 1)
+                st.success("Usuário removido com sucesso!")
+                st.rerun()
