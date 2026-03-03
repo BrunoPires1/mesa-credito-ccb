@@ -222,12 +222,17 @@ if menu == "📋 Operação":
         if info:
             st.info(f"📌 CCB já existente  \n👤 Analista: {info[6]}  \n📊 Status: {info[5]}")
 
-    if st.button("Assumir Análise"):
-        resposta = assumir_ccb(ccb_input, valor, parceiro, analista)
+        if st.button("Assumir Análise"):
+            resposta = assumir_ccb(ccb_input, valor, parceiro, analista)
+
         if resposta == "OK":
             st.success("CCB criada e assumida com sucesso!")
+            st.rerun()
+
         elif resposta == "CONTINUAR":
             st.success("Retomando análise desta CCB.")
+            st.rerun()
+
         else:
             st.error(resposta)
 
@@ -417,5 +422,6 @@ if menu == "🔐 Administração":
                 aba_usuarios.delete_rows(idx + 1)
                 st.success("Usuário removido com sucesso!")
                 st.rerun()
+
 
 
