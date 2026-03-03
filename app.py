@@ -7,6 +7,7 @@ from datetime import datetime
 import pandas as pd
 import io
 import matplotlib.pyplot as plt
+import pytz
 
 st.set_page_config(layout="wide")
 
@@ -165,11 +166,14 @@ def assumir_ccb(ccb, valor, parceiro, analista):
                 st.session_state["ccb_ativa"] = ccb
                 return "CONTINUAR"
 
+    fuso_brasil = pytz.timezone("America/Sao_Paulo")
+    data_atual = datetime.now(fuso_brasil).strftime("%d/%m/%Y %H:%M:%S")
+    
     nova_linha = [
         ccb,
         valor,
         parceiro,
-        datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+        data_atual,
         "Assinatura Reprovada",
         "Em Análise",
         analista,
@@ -247,6 +251,8 @@ if menu == "📋 Operação":
         df = df.dropna(subset=["Data da Análise"])
         df = df.sort_values(by="Data da Análise", ascending=False)
 
+        df["Data da Análise"] = df["Data da Análise"].dt.strftime("%d/%m/%Y %H:%M:%S")
+        
         st.dataframe(df, use_container_width=True, hide_index=True)
 
 # ==============================
@@ -390,5 +396,6 @@ if menu == "🔐 Administração":
                 aba_usuarios.delete_rows(idx + 1)
                 st.success("Usuário removido com sucesso!")
                 st.rerun()
+
 
 
