@@ -336,21 +336,23 @@ if menu == "🔐 Administração":
 
     st.title("🔐 Administração de Usuários")
 
-    st.subheader("Usuários Cadastrados")
+    usuarios = carregar_usuarios()
 
-    lista_usuarios = []
+    # LISTAR USUÁRIOS
+    lista = []
 
-    for nome, dados in USERS.items():
-        lista_usuarios.append({
+    for nome, dados in usuarios.items():
+        lista.append({
             "Usuário": nome,
             "Perfil": dados["perfil"]
         })
 
-    df_usuarios = pd.DataFrame(lista_usuarios)
-
-    st.dataframe(df_usuarios, use_container_width=True, hide_index=True)
+    df_users = pd.DataFrame(lista)
+    st.dataframe(df_users, use_container_width=True, hide_index=True)
 
     st.divider()
+
+    # ADICIONAR USUÁRIO
     st.subheader("Adicionar Novo Usuário")
 
     novo_usuario = st.text_input("Nome do Usuário")
@@ -358,27 +360,39 @@ if menu == "🔐 Administração":
     novo_perfil = st.selectbox("Perfil", ["Operador", "Supervisor"])
 
     if st.button("Cadastrar Usuário"):
+
         if novo_usuario and nova_senha:
-            USERS[novo_usuario] = {
-                "senha": nova_senha,
-                "perfil": novo_perfil
-            }
+
+            sheet_usuarios.append_row([
+                novo_usuario,
+                nova_senha,
+                novo_perfil
+            ])
+
             st.success("Usuário cadastrado com sucesso!")
+            st.rerun()
         else:
             st.error("Preencha todos os campos.")
 
     st.divider()
+
+    # EXCLUIR USUÁRIO
     st.subheader("Excluir Usuário")
 
     usuario_excluir = st.selectbox(
         "Selecionar Usuário para Excluir",
-        list(USERS.keys())
+        list(usuarios.keys())
     )
 
     if st.button("Excluir Usuário"):
-        if usuario_excluir in USERS:
-            del USERS[usuario_excluir]
-            st.success("Usuário excluído com sucesso!")
 
+        dados = sheet_usuarios.get_all_values()
 
+        for idx, linha in enumerate(dados[1:], start=2):
+            if linha[0] == usuario_excluir:
+                sheet_usuarios.delete_rows(idx)
+                break
+
+        st.success("Usuário excluído com sucesso!")
+        st.rerun()
 
