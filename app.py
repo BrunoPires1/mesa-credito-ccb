@@ -236,7 +236,10 @@ if menu == "📋 Operação":
         df = df.dropna(subset=["Data da Análise"])
         df = df.sort_values(by="Data da Análise", ascending=False)
 
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        # 👇 FORMATO BRASILEIRO
+df["Data da Análise"] = df["Data da Análise"].dt.strftime("%d/%m/%Y %H:%M:%S")
+
+st.dataframe(df, use_container_width=True, hide_index=True)
 
 # ==============================
 # 📊 ACOMPANHAMENTO
@@ -394,3 +397,4 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
