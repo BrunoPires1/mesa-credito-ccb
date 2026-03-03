@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 
 st.set_page_config(layout="wide")
 
+st.write("VERSÃO NOVA 03/03 - TESTE")
+
 # ==============================
 # ESTILO PERSONALIZADO (CSS)
 # ==============================
@@ -411,6 +413,7 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
 
 
