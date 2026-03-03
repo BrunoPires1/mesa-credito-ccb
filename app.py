@@ -194,26 +194,36 @@ if menu == "📋 Operação":
     valor = st.text_input("Valor Líquido")
     parceiro = st.text_input("Parceiro")
 
-    # 🔽 NOVO CAMPO - STATUS BANKERIZE
     status_bankerize = st.selectbox(
-    "Status Bankerize",
-    [
-        "Aguardando Análise da Assinatura",
-        "Aguardando Análise de Risco",
-        "Aguardando Análise Manual da Assinatura",
-        "Assinatura Reprovada",
-        "Pendente"
-    ],
-    key="status_bankerize_select"
-)
+        "Status Bankerize",
+        [
+            "Aguardando Análise da Assinatura",
+            "Aguardando Análise de Risco",
+            "Aguardando Análise Manual da Assinatura",
+            "Assinatura Reprovada",
+            "Pendente"
+        ],
+        key="status_bankerize_select"
+    )
 
     if ccb_input:
         info = buscar_ccb(ccb_input)
         if info:
-            st.info(f"📌 CCB já existente  \n👤 Analista: {info[6]}  \n📊 Status: {info[5]}")
+            st.info(
+                f"📌 CCB já existente  \n"
+                f"👤 Analista: {info[6]}  \n"
+                f"📊 Status: {info[5]}"
+            )
 
     if st.button("Assumir Análise"):
-        resposta = assumir_ccb(ccb_input, valor, parceiro, analista, status_bankerize)
+        resposta = assumir_ccb(
+            ccb_input,
+            valor,
+            parceiro,
+            analista,
+            status_bankerize
+        )
+
         if resposta == "OK":
             st.success("CCB criada e assumida com sucesso!")
         elif resposta == "CONTINUAR":
@@ -428,6 +438,7 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
 
 
