@@ -59,25 +59,25 @@ scope = [
 creds = ServiceAccountCredentials.from_json_keyfile_dict(google_creds, scope)
 client = gspread.authorize(creds)
 sheet = client.open(SHEET_NAME).worksheet("BASE_CONTROLE")
+sheet_usuarios = client.open(SHEET_NAME).worksheet("USUARIOS")
 
 # ==============================
 # LOGIN
 # ==============================
 
-USERS = {
-    "Bruno.Pires": {"senha": "103488", "perfil": "Supervisor"},
-    "Fabio.Moura": {"senha": "108026", "perfil": "Supervisor"},
+def carregar_usuarios():
+    dados = sheet_usuarios.get_all_values()
 
-    "Amanda.Fiorio": {"senha": "135433", "perfil": "Operador"},
-    "Andressa.Silva": {"senha": "152909", "perfil": "Operador"},
-    "Hugo.Poltronieri": {"senha": "104830", "perfil": "Operador"},
-    "Juliana.Santos": {"senha": "442908", "perfil": "Operador"},
-    "KauaFantoni": {"senha": "183349", "perfil": "Operador"},
-    "Lorrayne.Falcao": {"senha": "145472", "perfil": "Operador"},
-    "Matheus.Machado": {"senha": "132300", "perfil": "Operador"},
-    "Nathalia.Moreira": {"senha": "189966", "perfil": "Operador"},
-    "Ulisses.Neto": {"senha": "119715", "perfil": "Operador"},
-}
+    usuarios_dict = {}
+
+    if len(dados) > 1:
+        for linha in dados[1:]:
+            usuarios_dict[linha[0]] = {
+                "senha": linha[1],
+                "perfil": linha[2]
+            }
+
+    return usuarios_dict
 
 def login():
     st.title("🔐 Login - Mesa de Crédito")
@@ -85,13 +85,20 @@ def login():
     password = st.text_input("Senha", type="password")
 
     if st.button("Entrar"):
-        if user in USERS and USERS[user]["senha"] == password:
-            st.session_state["user"] = user
-            st.session_state["perfil"] = USERS[user]["perfil"]
-            st.rerun()
-        else:
-            st.error("Usuário ou senha inválidos")
+        if st.button("Entrar"):
 
+    usuarios = carregar_usuarios()
+
+    if user in usuarios and usuarios[user]["senha"] == password:
+
+        st.session_state["user"] = user
+        st.session_state["perfil"] = usuarios[user]["perfil"]
+
+        st.rerun()
+
+    else:
+        st.error("Usuário ou senha inválidos")
+        
 if "user" not in st.session_state:
     login()
     st.stop()
@@ -372,4 +379,5 @@ if menu == "🔐 Administração":
         if usuario_excluir in USERS:
             del USERS[usuario_excluir]
             st.success("Usuário excluído com sucesso!")
+
 
