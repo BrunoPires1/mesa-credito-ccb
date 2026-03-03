@@ -276,7 +276,9 @@ if menu == "📊 Acompanhamento":
         st.divider()
         st.subheader("📈 Resumo do Mês Atual")
 
-        mes_atual = datetime.now().strftime("%m/%Y")
+        fuso_brasil = pytz.timezone("America/Sao_Paulo")
+        mes_atual = datetime.now(fuso_brasil).strftime("%m/%Y")
+
         df["MesAno"] = df["Data da Análise"].dt.strftime("%m/%Y")
         df_mes_atual = df[df["MesAno"] == mes_atual]
 
@@ -322,6 +324,9 @@ if menu == "📊 Acompanhamento":
             st.info("Nenhuma proposta encontrada no mês atual.")
 
         st.divider()
+
+        df["MesAno"] = df["Data da Análise"].dt.strftime("%m/%Y")
+        
         st.subheader("👤 Dashboard por Analista")
 
         meses = sorted(df["MesAno"].dropna().unique(), reverse=True)
@@ -396,6 +401,3 @@ if menu == "🔐 Administração":
                 aba_usuarios.delete_rows(idx + 1)
                 st.success("Usuário removido com sucesso!")
                 st.rerun()
-
-
-
