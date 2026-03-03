@@ -5,3 +5,4 @@ pandas
 requests
 xlsxwriter
 bcrypt
+matplotlib
