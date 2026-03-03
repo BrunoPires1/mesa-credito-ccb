@@ -6,3 +6,4 @@ requests
 xlsxwriter
 bcrypt
 matplotlib
+pytz
