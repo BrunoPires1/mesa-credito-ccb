@@ -64,22 +64,20 @@ sheet = client.open(SHEET_NAME).worksheet("BASE_CONTROLE")
 # LOGIN
 # ==============================
 
-def carregar_usuarios():
-    aba_usuarios = client.open(SHEET_NAME).worksheet("USUARIOS")
-    dados = aba_usuarios.get_all_values()
-
-    usuarios = {}
-
-    for linha in dados[1:]:
-        if len(linha) >= 3:
-            usuarios[linha[0]] = {
-                "senha": linha[1],
-                "perfil": linha[2]
-            }
-
-    return usuarios
-
-USERS = carregar_usuarios()
+USERS = {
+    "Bruno.Pires": "831227",
+    "Amanda.Fiorio": "135433",
+    "Andressa.Silva": "152909",
+    "Antonio.Aymi": "016912",
+    "Fabio.Moura": "108026",
+    "Hugo.Poltronieri": "104830",
+    "Juliana.Santos": "442908",
+    "KauaFantoni": "183349",
+    "Lorrayne.Falcao": "145472",
+    "Matheus.Machado": "132300",
+    "Nathalia.Moreira": "189966",
+    "Ulisses.Neto": "119715",
+}
 
 def login():
     st.title("🔐 Login - Mesa de Crédito")
@@ -87,49 +85,29 @@ def login():
     password = st.text_input("Senha", type="password")
 
     if st.button("Entrar"):
-
-        if user in USERS:
-
-            if USERS[user]["senha"] == password:
-
-                st.session_state["user"] = user
-                st.session_state["perfil"] = USERS[user]["perfil"]
-
-                st.rerun()
-            else:
-                st.error("Usuário ou senha inválidos")
+        if user in USERS and USERS[user] == password:
+            st.session_state["user"] = user
+            st.rerun()
         else:
             st.error("Usuário ou senha inválidos")
 
-# 🔐 BLOQUEIO DE ACESSO
 if "user" not in st.session_state:
     login()
     st.stop()
 
 analista = st.session_state["user"]
-perfil = st.session_state["perfil"]
 
 # ==============================
 # MENU LATERAL
 # ==============================
 
-menu_opcoes = ["📋 Operação", "📊 Acompanhamento"]
-
-if perfil == "Supervisor":
-    menu_opcoes.append("🔐 Administração")
-
-menu = st.sidebar.selectbox("Menu", menu_opcoes)
+menu = st.sidebar.selectbox(
+    "Menu",
+    ["📋 Operação", "📊 Acompanhamento"]
+)
 
 st.sidebar.markdown("---")
 st.sidebar.write(f"👤 Usuário: **{analista}**")
-st.sidebar.write(f"🎯 Perfil: **{perfil}**")
-
-st.sidebar.markdown("---")
-
-if st.sidebar.button("🚪 Sair"):
-    del st.session_state["user"]
-    del st.session_state["perfil"]
-    st.rerun()
 
 # ==============================
 # FUNÇÕES
@@ -334,60 +312,3 @@ if menu == "📊 Acompanhamento":
 
             resumo = resumo.sort_values(by="Total", ascending=False)
             st.dataframe(resumo, use_container_width=True, hide_index=True)
-
-# ==============================
-# 🔐 ADMINISTRAÇÃO
-# ==============================
-
-if menu == "🔐 Administração":
-
-    if perfil != "Supervisor":
-        st.warning("Acesso restrito a Supervisores.")
-        st.stop()
-
-    st.title("🔐 Administração de Usuários")
-
-    aba_usuarios = client.open(SHEET_NAME).worksheet("USUARIOS")
-    dados = aba_usuarios.get_all_values()
-
-    df_users = pd.DataFrame(dados[1:], columns=dados[0])
-
-    st.subheader("Usuários Atuais")
-    st.dataframe(df_users, use_container_width=True, hide_index=True)
-
-    st.divider()
-    st.subheader("Adicionar Novo Usuário")
-
-    novo_user = st.text_input("Novo Usuário")
-    nova_senha = st.text_input("Senha", type="password")
-    
-    perfil_novo = st.selectbox(
-        "Perfil",
-        ["Operador", "Supervisor"]
-)
-
-    if st.button("Adicionar Usuário"):
-        if novo_user and nova_senha:
-            aba_usuarios.append_row([
-                novo_user,
-                nova_senha,
-                perfil_novo
-    ])
-            st.success("Usuário adicionado com sucesso!")
-            st.rerun()
-        else:
-            st.error("Preencha todos os campos.")
-
-    st.divider()
-    st.subheader("Remover Usuário")
-
-    usuario_remover = st.selectbox("Selecionar usuário", df_users["Usuario"])
-
-    if st.button("Remover Usuário"):
-        linhas = aba_usuarios.get_all_values()
-        for idx, linha in enumerate(linhas):
-            if linha[0] == usuario_remover:
-                aba_usuarios.delete_rows(idx + 1)
-                st.success("Usuário removido com sucesso!")
-                st.rerun()
-
