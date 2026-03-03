@@ -81,23 +81,23 @@ def carregar_usuarios():
 
 def login():
     st.title("🔐 Login - Mesa de Crédito")
+
     user = st.text_input("Usuário")
     password = st.text_input("Senha", type="password")
 
     if st.button("Entrar"):
-        if st.button("Entrar"):
 
-    usuarios = carregar_usuarios()
+        usuarios = carregar_usuarios()
 
-    if user in usuarios and usuarios[user]["senha"] == password:
+        if user in usuarios and usuarios[user]["senha"] == password:
 
-        st.session_state["user"] = user
-        st.session_state["perfil"] = usuarios[user]["perfil"]
+            st.session_state["user"] = user
+            st.session_state["perfil"] = usuarios[user]["perfil"]
 
-        st.rerun()
+            st.rerun()
 
-    else:
-        st.error("Usuário ou senha inválidos")
+        else:
+            st.error("Usuário ou senha inválidos")
         
 if "user" not in st.session_state:
     login()
@@ -379,5 +379,6 @@ if menu == "🔐 Administração":
         if usuario_excluir in USERS:
             del USERS[usuario_excluir]
             st.success("Usuário excluído com sucesso!")
+
 
 
