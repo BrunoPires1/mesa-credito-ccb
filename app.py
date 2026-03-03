@@ -114,6 +114,12 @@ st.sidebar.write(f"👤 Usuário: **{analista}**")
 # FUNÇÕES
 # ==============================
 
+def criptografar_senha(senha):
+    senha_bytes = senha.encode()  
+    hash_obj = hashlib.sha256(senha_bytes)  
+    senha_hash = hash_obj.hexdigest()  
+    return senha_hash
+
 def carregar_base():
     return sheet.get_all_values()
 
@@ -360,4 +366,5 @@ if menu == "🔐 Administração":
                 aba_usuarios.delete_rows(idx + 1)
                 st.success("Usuário removido com sucesso!")
                 st.rerun()
+
 
