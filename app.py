@@ -195,7 +195,7 @@ if menu == "📋 Operação":
     parceiro = st.text_input("Parceiro")
 
     # 🔽 NOVO CAMPO - STATUS BANKERIZE
-status_bankerize = st.selectbox(
+    status_bankerize = st.selectbox(
     "Status Bankerize",
     [
         "Aguardando Análise da Assinatura",
@@ -428,5 +428,6 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
 
