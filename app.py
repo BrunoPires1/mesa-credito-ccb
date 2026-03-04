@@ -49,6 +49,7 @@ else:
 
     st.markdown("""
     <style>
+
     .stApp {
         background-color: #0e1117;
         color: #ffffff;
@@ -58,6 +59,38 @@ else:
         color: #58a6ff;
     }
 
+    /* labels dos campos */
+    label {
+        color: #e6edf3 !important;
+        font-weight: 500;
+    }
+
+    /* texto digitado */
+    input, textarea {
+        color: #ffffff !important;
+    }
+
+    /* fundo dos campos */
+    .stTextInput input,
+    .stNumberInput input,
+    .stTextArea textarea {
+        background-color: #161b22 !important;
+        color: #ffffff !important;
+        border: 1px solid #30363d !important;
+    }
+
+    /* selectbox */
+    .stSelectbox div[data-baseweb="select"] {
+        background-color: #161b22 !important;
+        color: #ffffff !important;
+    }
+
+    /* texto dentro do select */
+    .stSelectbox div {
+        color: #ffffff !important;
+    }
+
+    /* botões */
     .stButton>button {
         background-color: #238636;
         color: white;
@@ -65,9 +98,11 @@ else:
         padding: 8px 16px;
     }
 
+    /* tabela */
     .stDataFrame {
         color: white;
     }
+
     </style>
     """, unsafe_allow_html=True)
 
@@ -471,6 +506,7 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
 
 
