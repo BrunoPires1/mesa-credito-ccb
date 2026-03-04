@@ -138,7 +138,7 @@ def buscar_ccb(ccb):
             return linha
     return None
 
-def assumir_ccb(ccb, valor, parceiro, analista):
+def assumir_ccb(ccb, valor, parceiro, analista, status_bankerize):
     if not ccb:
         return "Informe a CCB."
 
@@ -161,7 +161,7 @@ def assumir_ccb(ccb, valor, parceiro, analista):
         valor,
         parceiro,
         datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-        "Assinatura Reprovada",
+        status_bankerize,  # 🔥 AGORA VEM DO SELECTBOX
         "Em Análise",
         analista,
         ""
@@ -171,10 +171,11 @@ def assumir_ccb(ccb, valor, parceiro, analista):
     st.session_state["ccb_ativa"] = ccb
     return "OK"
 
-def finalizar_ccb(ccb, resultado, anotacoes):
+def finalizar_ccb(ccb, resultado, anotacoes, status_bankerize):
     dados = sheet.get_all_values()
     for idx, linha in enumerate(dados[1:], start=2):
         if str(linha[0]) == str(ccb):
+            sheet.update(f"E{idx}", [[status_bankerize]])
             sheet.update(f"F{idx}", [[resultado]])
             sheet.update(f"H{idx}", [[anotacoes]])
             return "Finalizado"
@@ -192,13 +193,36 @@ if menu == "📋 Operação":
     valor = st.text_input("Valor Líquido")
     parceiro = st.text_input("Parceiro")
 
+    status_bankerize = st.selectbox(
+        "Status Bankerize",
+        [
+            "Aguardando Análise da Assinatura",
+            "Aguardando Análise de Risco",
+            "Aguardando Análise Manual da Assinatura",
+            "Assinatura Reprovada",
+            "Pendente"
+        ],
+        key="status_bankerize_select"
+    )
+
     if ccb_input:
         info = buscar_ccb(ccb_input)
         if info:
-            st.info(f"📌 CCB já existente  \n👤 Analista: {info[6]}  \n📊 Status: {info[5]}")
+            st.info(
+                f"📌 CCB já existente  \n"
+                f"👤 Analista: {info[6]}  \n"
+                f"📊 Status: {info[5]}"
+            )
 
     if st.button("Assumir Análise"):
-        resposta = assumir_ccb(ccb_input, valor, parceiro, analista)
+        resposta = assumir_ccb(
+            ccb_input,
+            valor,
+            parceiro,
+            analista,
+            status_bankerize
+        )
+
         if resposta == "OK":
             st.success("CCB criada e assumida com sucesso!")
         elif resposta == "CONTINUAR":
@@ -220,7 +244,7 @@ if menu == "📋 Operação":
             if resultado == "Análise Pendente" and not anotacoes:
                 st.error("Para Análise Pendente é obrigatório preencher Anotações.")
             else:
-                finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes)
+                finalizar_ccb(st.session_state["ccb_ativa"], resultado, anotacoes, status_bankerize)
                 st.success("Análise finalizada com sucesso!")
                 del st.session_state["ccb_ativa"]
                 st.rerun()
