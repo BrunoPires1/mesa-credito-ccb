@@ -17,7 +17,7 @@ st.set_page_config(layout="wide")
 if "tema" not in st.session_state:
     st.session_state.tema = "claro"
 
-st.write("VERSÃO NOVA 03/03 - TESTE")
+st.write("SISTEMA DE CONTROLE DE ANÁLISE DE CRÉDITO ECONSIGNADO")
 
 # ==============================
 # ESTILO DINÂMICO (CLARO / ESCURO)
@@ -506,6 +506,7 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
 
 
