@@ -207,37 +207,58 @@ def buscar_ccb(ccb):
             return linha
     return None
 
-def assumir_ccb(ccb, valor, parceiro, analista, status_bankerize):
+def assumir_ccb(ccb, valor, parceiro, status_bankerize, analista):
+
     if not ccb:
         return "Informe a CCB."
 
     dados = sheet.get_all_values()
 
-    for linha in dados[1:]:
+    for idx, linha in enumerate(dados[1:], start=2):
+
         numero = str(linha[0])
         status = linha[5]
 
         if numero == str(ccb):
+
+            # ❌ NÃO PERMITE ALTERAR SE JÁ FINALIZADO
             if status in ["Análise Aprovada", "Análise Reprovada"]:
                 return "⚠️ Esta CCB já foi finalizada."
 
+            # ✔ PERMITE ASSUMIR SE ESTIVER EM ANDAMENTO
             if status in ["Em Análise", "Análise Pendente"]:
+
+                sheet.update(f"B{idx}", [[valor]])
+                sheet.update(f"C{idx}", [[parceiro]])
+                sheet.update(f"E{idx}", [[status_bankerize]])
+
+                # Atualiza status para EM ANÁLISE
+                sheet.update(f"F{idx}", [["Em Análise"]])
+
+                # Atualiza analista
+                sheet.update(f"G{idx}", [[analista]])
+
                 st.session_state["ccb_ativa"] = ccb
+
                 return "CONTINUAR"
+
+    # ✔ SE NÃO EXISTIR A CCB → CRIA NOVA
 
     nova_linha = [
         ccb,
         valor,
         parceiro,
         datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-        status_bankerize,  # 🔥 AGORA VEM DO SELECTBOX
+        status_bankerize,
         "Em Análise",
         analista,
         ""
     ]
 
     sheet.insert_row(nova_linha, index=len(dados) + 1)
+
     st.session_state["ccb_ativa"] = ccb
+
     return "OK"
 
 def finalizar_ccb(ccb, resultado, anotacoes, status_bankerize):
@@ -506,4 +527,5 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
