@@ -207,51 +207,37 @@ def buscar_ccb(ccb):
             return linha
     return None
 
-def assumir_ccb(ccb, valor, parceiro, status_bankerize, analista_logado):
-
+def assumir_ccb(ccb, valor, parceiro, analista, status_bankerize):
     if not ccb:
         return "Informe a CCB."
 
     dados = sheet.get_all_values()
 
-    for idx, linha in enumerate(dados[1:], start=2):
-
+    for linha in dados[1:]:
         numero = str(linha[0])
         status = linha[5]
 
         if numero == str(ccb):
-
             if status in ["Análise Aprovada", "Análise Reprovada"]:
                 return "⚠️ Esta CCB já foi finalizada."
 
             if status in ["Em Análise", "Análise Pendente"]:
-
-                sheet.update(f"B{idx}", [[valor]])
-                sheet.update(f"C{idx}", [[parceiro]])
-                sheet.update(f"E{idx}", [[status_bankerize]])
-                sheet.update(f"F{idx}", [["Em Análise"]])
-                sheet.update(f"G{idx}", [[analista]])
-
                 st.session_state["ccb_ativa"] = ccb
                 return "CONTINUAR"
-
-    # NOVA CCB
 
     nova_linha = [
         ccb,
         valor,
         parceiro,
         datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-        status_bankerize,
+        status_bankerize,  # 🔥 AGORA VEM DO SELECTBOX
         "Em Análise",
         analista,
         ""
     ]
 
     sheet.insert_row(nova_linha, index=len(dados) + 1)
-
     st.session_state["ccb_ativa"] = ccb
-
     return "OK"
 
 def finalizar_ccb(ccb, resultado, anotacoes, status_bankerize):
@@ -259,7 +245,7 @@ def finalizar_ccb(ccb, resultado, anotacoes, status_bankerize):
     for idx, linha in enumerate(dados[1:], start=2):
         if str(linha[0]) == str(ccb):
             sheet.update(f"E{idx}", [[status_bankerize]])
-            sheet.update(f"F{idx}", [["Em Análise"]])
+            sheet.update(f"F{idx}", [[resultado]])
             sheet.update(f"H{idx}", [[anotacoes]])
             return "Finalizado"
     return "CCB não encontrada."
@@ -302,8 +288,8 @@ if menu == "📋 Operação":
             ccb_input,
             valor,
             parceiro,
-            status_bankerize,
-            analista
+            analista,
+            status_bankerize
         )
 
         if resposta == "OK":
@@ -520,6 +506,8 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
+
 
 
 
