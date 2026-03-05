@@ -244,7 +244,7 @@ def assumir_ccb(ccb, valor, parceiro, status_bankerize, analista):
 
     # ✔ SE NÃO EXISTIR A CCB → CRIA NOVA
 
-    nova_linha = [
+   nova_linha = [
         ccb,
         valor,
         parceiro,
@@ -266,7 +266,7 @@ def finalizar_ccb(ccb, resultado, anotacoes, status_bankerize):
     for idx, linha in enumerate(dados[1:], start=2):
         if str(linha[0]) == str(ccb):
             sheet.update(f"E{idx}", [[status_bankerize]])
-            sheet.update(f"F{idx}", [[resultado]])
+            sheet.update(f"F{idx}", [["Em Análise"]])
             sheet.update(f"H{idx}", [[anotacoes]])
             return "Finalizado"
     return "CCB não encontrada."
@@ -527,5 +527,6 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
 
