@@ -195,11 +195,12 @@ else:
 # FUNÇÕES
 # ==============================
 
+@st.cache_data(ttl=30)
 def carregar_base():
-    return sheet.get_all_values()
+    return carregar_base()
 
 def buscar_ccb(ccb):
-    dados = sheet.get_all_values()
+    dados = carregar_base()
     if len(dados) <= 1:
         return None
     for linha in dados[1:]:
@@ -211,7 +212,7 @@ def assumir_ccb(ccb, valor, parceiro, analista, status_bankerize):
     if not ccb:
         return "Informe a CCB."
 
-    dados = sheet.get_all_values()
+    dados = carregar_base()
 
     for linha in dados[1:]:
         numero = str(linha[0])
@@ -237,6 +238,7 @@ def assumir_ccb(ccb, valor, parceiro, analista, status_bankerize):
     ]
 
     sheet.insert_row(nova_linha, index=len(dados) + 1)
+    st.cache_data.clear()
     st.session_state["ccb_ativa"] = ccb
     return "OK"
 
@@ -247,6 +249,7 @@ def finalizar_ccb(ccb, resultado, anotacoes, status_bankerize):
             sheet.update(f"E{idx}", [[status_bankerize]])
             sheet.update(f"F{idx}", [[resultado]])
             sheet.update(f"H{idx}", [[anotacoes]])
+            st.cache_data.clear()
             return "Finalizado"
     return "CCB não encontrada."
 
@@ -506,6 +509,7 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
 
 
