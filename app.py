@@ -127,7 +127,9 @@ sheet_usuarios = client.open(SHEET_NAME).worksheet("USUARIOS")
 # LOGIN
 # ==============================
 
+@st.cache_data(ttl=86400)
 def carregar_usuarios():
+
     dados = sheet_usuarios.get_all_values()
 
     usuarios_dict = {}
@@ -197,7 +199,7 @@ else:
 
 @st.cache_data(ttl=30)
 def carregar_base():
-    return carregar_base()
+    return sheet.get_all_values()
 
 def buscar_ccb(ccb):
     dados = carregar_base()
@@ -243,7 +245,7 @@ def assumir_ccb(ccb, valor, parceiro, analista, status_bankerize):
     return "OK"
 
 def finalizar_ccb(ccb, resultado, anotacoes, status_bankerize):
-    dados = sheet.get_all_values()
+    dados = carregar_base()
     for idx, linha in enumerate(dados[1:], start=2):
         if str(linha[0]) == str(ccb):
             sheet.update(f"E{idx}", [[status_bankerize]])
@@ -483,6 +485,8 @@ if menu == "🔐 Administração":
                 novo_perfil
             ])
 
+            st.cache_data.clear()
+
             st.success("Usuário cadastrado com sucesso!")
             st.rerun()
         else:
@@ -509,6 +513,7 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
 
 
