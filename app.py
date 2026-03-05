@@ -4,8 +4,8 @@ from oauth2client.service_account import ServiceAccountCredentials
 import os
 import json
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import pandas as pd
-import io
 import matplotlib.pyplot as plt
 
 st.set_page_config(layout="wide")
@@ -118,16 +118,28 @@ scope = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-creds = ServiceAccountCredentials.from_json_keyfile_dict(google_creds, scope)
-client = gspread.authorize(creds)
-sheet = client.open(SHEET_NAME).worksheet("BASE_CONTROLE")
-sheet_usuarios = client.open(SHEET_NAME).worksheet("USUARIOS")
+@st.cache_resource
+def conectar_google():
+
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(google_creds, scope)
+    client = gspread.authorize(creds)
+
+    planilha = client.open(SHEET_NAME)
+
+    sheet = planilha.worksheet("BASE_CONTROLE")
+    sheet_usuarios = planilha.worksheet("USUARIOS")
+
+    return sheet, sheet_usuarios
+
+sheet, sheet_usuarios = conectar_google()
 
 # ==============================
 # LOGIN
 # ==============================
 
+@st.cache_data(ttl=86400)
 def carregar_usuarios():
+
     dados = sheet_usuarios.get_all_values()
 
     usuarios_dict = {}
@@ -195,58 +207,81 @@ else:
 # FUNÇÕES
 # ==============================
 
+@st.cache_data(ttl=300)
 def carregar_base():
-    return sheet.get_all_values()
+
+    dados = sheet.get_all_values()
+
+    if len(dados) <= 1:
+        return pd.DataFrame()
+
+    header = dados[0]
+    registros = dados[1:]
+
+    df = pd.DataFrame(registros, columns=header)
+
+    return df
 
 def buscar_ccb(ccb):
-    dados = sheet.get_all_values()
-    if len(dados) <= 1:
+
+    df = carregar_base().copy()
+
+    if df.empty:
         return None
-    for linha in dados[1:]:
-        if str(linha[0]) == str(ccb):
-            return linha
-    return None
+
+    resultado = df[df["CCB"] == str(ccb)]
+
+    if resultado.empty:
+        return None
+
+    return resultado.iloc[0]
 
 def assumir_ccb(ccb, valor, parceiro, analista, status_bankerize):
+
     if not ccb:
         return "Informe a CCB."
 
-    dados = sheet.get_all_values()
+    df = carregar_base()
 
-    for linha in dados[1:]:
-        numero = str(linha[0])
-        status = linha[5]
+    registro = df[df["CCB"] == str(ccb)]
 
-        if numero == str(ccb):
-            if status in ["Análise Aprovada", "Análise Reprovada"]:
-                return "⚠️ Esta CCB já foi finalizada."
+    if not registro.empty:
 
-            if status in ["Em Análise", "Análise Pendente"]:
-                st.session_state["ccb_ativa"] = ccb
-                return "CONTINUAR"
+        status = registro.iloc[0]["Status Analista"]
+
+        if status in ["Análise Aprovada", "Análise Reprovada"]:
+            return "⚠️ Esta CCB já foi finalizada."
+
+        if status in ["Em Análise", "Análise Pendente"]:
+            st.session_state["ccb_ativa"] = ccb
+            return "CONTINUAR"
 
     nova_linha = [
         ccb,
         valor,
         parceiro,
-        datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-        status_bankerize,  # 🔥 AGORA VEM DO SELECTBOX
+        datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M:%S"),
+        status_bankerize,
         "Em Análise",
         analista,
         ""
     ]
 
-    sheet.insert_row(nova_linha, index=len(dados) + 1)
+    sheet.append_row(nova_linha)
+    st.cache_data.clear()
     st.session_state["ccb_ativa"] = ccb
     return "OK"
 
 def finalizar_ccb(ccb, resultado, anotacoes, status_bankerize):
-    dados = sheet.get_all_values()
-    for idx, linha in enumerate(dados[1:], start=2):
-        if str(linha[0]) == str(ccb):
-            sheet.update(f"E{idx}", [[status_bankerize]])
-            sheet.update(f"F{idx}", [[resultado]])
-            sheet.update(f"H{idx}", [[anotacoes]])
+    df = carregar_base()
+    for idx, linha in df.iterrows():
+        if str(linha["CCB"]) == str(ccb):
+            linha_real = idx + 2
+
+            sheet.update(f"E{linha_real}", [[status_bankerize]])
+            sheet.update(f"F{linha_real}", [[resultado]])
+            sheet.update(f"H{linha_real}", [[anotacoes]])
+            st.cache_data.clear()
             return "Finalizado"
     return "CCB não encontrada."
 
@@ -276,12 +311,13 @@ if menu == "📋 Operação":
 
     if ccb_input:
         info = buscar_ccb(ccb_input)
-        if info:
+
+        if info is not None:
             st.info(
                 f"📌 CCB já existente  \n"
-                f"👤 Analista: {info[6]}  \n"
-                f"📊 Status: {info[5]}"
-            )
+                f"👤 Analista: {info['Analista']}  \n"
+                f"📊 Status: {info['Status Analista']}"
+        )
 
     if st.button("Assumir Análise"):
         resposta = assumir_ccb(
@@ -325,13 +361,9 @@ if menu == "📋 Operação":
     st.divider()
     st.subheader("📊 Painel Geral")
 
-    dados = carregar_base()
-
-    if len(dados) > 1:
-
-        header = dados[0]
-        registros = dados[1:]
-        df = pd.DataFrame(registros, columns=header)
+    df = carregar_base().copy()
+    
+    if not df.empty:
 
         df["Data da Análise"] = pd.to_datetime(
             df["Data da Análise"],
@@ -358,12 +390,9 @@ if menu == "📊 Acompanhamento":
 
     st.title("📊 Acompanhamento")
 
-    dados = carregar_base()
-    if len(dados) > 1:
+    df = carregar_base().copy()
 
-        header = dados[0]
-        registros = dados[1:]
-        df = pd.DataFrame(registros, columns=header)
+    if not df.empty:
 
         df["Data da Análise"] = pd.to_datetime(df["Data da Análise"], dayfirst=True, errors="coerce")
         df = df.dropna(subset=["Data da Análise"])
@@ -480,6 +509,8 @@ if menu == "🔐 Administração":
                 novo_perfil
             ])
 
+            st.cache_data.clear()
+
             st.success("Usuário cadastrado com sucesso!")
             st.rerun()
         else:
@@ -506,11 +537,3 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
-
-
-
-
-
-
-
-
