@@ -10,6 +10,9 @@ import matplotlib.pyplot as plt
 
 st.set_page_config(layout="wide")
 
+if "tema" not in st.session_state:
+    st.session_state.tema = "auto"
+
 st.markdown("""
 <style>
 
@@ -529,6 +532,7 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
 
 
