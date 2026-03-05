@@ -119,10 +119,20 @@ scope = [
 
 creds = ServiceAccountCredentials.from_json_keyfile_dict(google_creds, scope)
 client = gspread.authorize(creds)
-planilha = client.open(SHEET_NAME)
+@st.cache_resource
+def conectar_google():
 
-sheet = planilha.worksheet("BASE_CONTROLE")
-sheet_usuarios = planilha.worksheet("USUARIOS")
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(google_creds, scope)
+    client = gspread.authorize(creds)
+
+    planilha = client.open(SHEET_NAME)
+
+    sheet = planilha.worksheet("BASE_CONTROLE")
+    sheet_usuarios = planilha.worksheet("USUARIOS")
+
+    return sheet, sheet_usuarios
+
+sheet, sheet_usuarios = conectar_google()
 
 # ==============================
 # LOGIN
@@ -514,6 +524,7 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
 
 
