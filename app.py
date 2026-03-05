@@ -310,12 +310,13 @@ if menu == "📋 Operação":
 
     if ccb_input:
         info = buscar_ccb(ccb_input)
-        if info:
-            st.info(
-                f"📌 CCB já existente  \n"
-                f"👤 Analista: {info[6]}  \n"
-                f"📊 Status: {info[5]}"
-            )
+
+    if info is not None:
+        st.info(
+            f"📌 CCB já existente  \n"
+            f"👤 Analista: {info['Analista']}  \n"
+            f"📊 Status: {info['Status Analista']}"
+        )
 
     if st.button("Assumir Análise"):
         resposta = assumir_ccb(
@@ -535,6 +536,7 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
 
 
