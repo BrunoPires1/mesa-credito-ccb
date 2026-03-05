@@ -207,7 +207,7 @@ def buscar_ccb(ccb):
             return linha
     return None
 
-def assumir_ccb(ccb, valor, parceiro, status_bankerize, analista):
+def assumir_ccb(ccb, valor, parceiro, status_bankerize, analista_logado):
 
     if not ccb:
         return "Informe a CCB."
@@ -302,8 +302,8 @@ if menu == "📋 Operação":
             ccb_input,
             valor,
             parceiro,
-            analista,
-            status_bankerize
+            status_bankerize,
+            analista
         )
 
         if resposta == "OK":
@@ -520,6 +520,7 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
 
 
