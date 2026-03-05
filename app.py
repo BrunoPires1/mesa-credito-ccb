@@ -5,7 +5,6 @@ import os
 import json
 from datetime import datetime
 import pandas as pd
-import io
 import matplotlib.pyplot as plt
 
 st.set_page_config(layout="wide")
@@ -515,6 +514,7 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
 
 
