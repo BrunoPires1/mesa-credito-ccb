@@ -221,30 +221,23 @@ def assumir_ccb(ccb, valor, parceiro, status_bankerize, analista):
 
         if numero == str(ccb):
 
-            # ❌ NÃO PERMITE ALTERAR SE JÁ FINALIZADO
             if status in ["Análise Aprovada", "Análise Reprovada"]:
                 return "⚠️ Esta CCB já foi finalizada."
 
-            # ✔ PERMITE ASSUMIR SE ESTIVER EM ANDAMENTO
             if status in ["Em Análise", "Análise Pendente"]:
 
                 sheet.update(f"B{idx}", [[valor]])
                 sheet.update(f"C{idx}", [[parceiro]])
                 sheet.update(f"E{idx}", [[status_bankerize]])
-
-                # Atualiza status para EM ANÁLISE
                 sheet.update(f"F{idx}", [["Em Análise"]])
-
-                # Atualiza analista
                 sheet.update(f"G{idx}", [[analista]])
 
                 st.session_state["ccb_ativa"] = ccb
-
                 return "CONTINUAR"
 
-    # ✔ SE NÃO EXISTIR A CCB → CRIA NOVA
+    # NOVA CCB
 
-   nova_linha = [
+    nova_linha = [
         ccb,
         valor,
         parceiro,
@@ -527,6 +520,7 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
 
 
