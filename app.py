@@ -10,41 +10,101 @@ import matplotlib.pyplot as plt
 
 st.set_page_config(layout="wide")
 
-st.write("VERSÃO NOVA 03/03 - TESTE")
-
 # ==============================
-# ESTILO PERSONALIZADO (CSS)
+# CONTROLE DE TEMA (CLARO / ESCURO)
 # ==============================
 
-st.markdown("""
-<style>
-.stApp {
-    background-color: #f4f6f9;
-}
+if "tema" not in st.session_state:
+    st.session_state.tema = "claro"
 
-h1, h2, h3 {
-    color: #0d3b66;
-}
+st.write("SISTEMA DE CONTROLE DE ANÁLISE DE CRÉDITO ECONSIGNADO")
 
-.stButton>button {
-    background-color: #0d3b66;
-    color: white;
-    border-radius: 8px;
-    padding: 8px 16px;
-    border: none;
-}
+# ==============================
+# ESTILO DINÂMICO (CLARO / ESCURO)
+# ==============================
 
-.stButton>button:hover {
-    background-color: #144e8c;
-    color: white;
-}
+if st.session_state.tema == "claro":
 
-.block-container {
-    padding-top: 2rem;
-    padding-bottom: 2rem;
-}
-</style>
-""", unsafe_allow_html=True)
+    st.markdown("""
+    <style>
+    .stApp {
+        background-color: #f4f6f9;
+        color: #000000;
+    }
+
+    h1, h2, h3 {
+        color: #0d3b66;
+    }
+
+    .stButton>button {
+        background-color: #0d3b66;
+        color: white;
+        border-radius: 8px;
+        padding: 8px 16px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+else:
+
+    st.markdown("""
+    <style>
+
+    .stApp {
+        background-color: #0e1117;
+        color: #ffffff;
+    }
+
+    h1, h2, h3 {
+        color: #58a6ff;
+    }
+
+    /* labels dos campos */
+    label {
+        color: #e6edf3 !important;
+        font-weight: 500;
+    }
+
+    /* texto digitado */
+    input, textarea {
+        color: #ffffff !important;
+    }
+
+    /* fundo dos campos */
+    .stTextInput input,
+    .stNumberInput input,
+    .stTextArea textarea {
+        background-color: #161b22 !important;
+        color: #ffffff !important;
+        border: 1px solid #30363d !important;
+    }
+
+    /* selectbox */
+    .stSelectbox div[data-baseweb="select"] {
+        background-color: #161b22 !important;
+        color: #ffffff !important;
+    }
+
+    /* texto dentro do select */
+    .stSelectbox div {
+        color: #ffffff !important;
+    }
+
+    /* botões */
+    .stButton>button {
+        background-color: #238636;
+        color: white;
+        border-radius: 8px;
+        padding: 8px 16px;
+    }
+
+    /* tabela */
+    .stDataFrame {
+        color: white;
+    }
+
+    </style>
+    """, unsafe_allow_html=True)
 
 # ==============================
 # CONFIGURAÇÕES
@@ -121,6 +181,15 @@ menu = st.sidebar.selectbox("Menu", opcoes_menu)
 st.sidebar.markdown("---")
 st.sidebar.write(f"👤 Usuário: **{analista}**")
 st.sidebar.write(f"🔑 Perfil: **{st.session_state['perfil']}**")
+# BOTÃO DE TROCA DE TEMA
+if st.session_state.tema == "claro":
+    if st.sidebar.button("🌙 Modo Escuro"):
+        st.session_state.tema = "escuro"
+        st.rerun()
+else:
+    if st.sidebar.button("☀️ Modo Claro"):
+        st.session_state.tema = "claro"
+        st.rerun()
 
 # ==============================
 # FUNÇÕES
@@ -437,7 +506,4 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
-
-
-
 
