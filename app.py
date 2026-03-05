@@ -223,7 +223,7 @@ def carregar_base():
 
 def buscar_ccb(ccb):
 
-    df = carregar_base()
+    df = carregar_base().copy()
 
     if df.empty:
         return None
@@ -236,29 +236,31 @@ def buscar_ccb(ccb):
     return resultado.iloc[0]
 
 def assumir_ccb(ccb, valor, parceiro, analista, status_bankerize):
+
     if not ccb:
         return "Informe a CCB."
 
     df = carregar_base()
 
-    for _, linha in df.iterrows():
-        numero = str(linha["CCB"])
-        status = linha["Status Analista"]
+    registro = df[df["CCB"] == str(ccb)]
 
-        if numero == str(ccb):
-            if status in ["Análise Aprovada", "Análise Reprovada"]:
-                return "⚠️ Esta CCB já foi finalizada."
+    if not registro.empty:
 
-            if status in ["Em Análise", "Análise Pendente"]:
-                st.session_state["ccb_ativa"] = ccb
-                return "CONTINUAR"
+        status = registro.iloc[0]["Status Analista"]
+
+        if status in ["Análise Aprovada", "Análise Reprovada"]:
+            return "⚠️ Esta CCB já foi finalizada."
+
+        if status in ["Em Análise", "Análise Pendente"]:
+            st.session_state["ccb_ativa"] = ccb
+            return "CONTINUAR"
 
     nova_linha = [
         ccb,
         valor,
         parceiro,
         datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-        status_bankerize,  # 🔥 AGORA VEM DO SELECTBOX
+        status_bankerize,
         "Em Análise",
         analista,
         ""
@@ -533,6 +535,7 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
 
 
