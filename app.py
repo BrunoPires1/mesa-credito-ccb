@@ -120,8 +120,10 @@ scope = [
 
 creds = ServiceAccountCredentials.from_json_keyfile_dict(google_creds, scope)
 client = gspread.authorize(creds)
-sheet = client.open(SHEET_NAME).worksheet("BASE_CONTROLE")
-sheet_usuarios = client.open(SHEET_NAME).worksheet("USUARIOS")
+planilha = client.open(SHEET_NAME)
+
+sheet = planilha.worksheet("BASE_CONTROLE")
+sheet_usuarios = planilha.worksheet("USUARIOS")
 
 # ==============================
 # LOGIN
@@ -197,7 +199,7 @@ else:
 # FUNÇÕES
 # ==============================
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=300)
 def carregar_base():
     return sheet.get_all_values()
 
@@ -513,6 +515,7 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
 
 
