@@ -4,6 +4,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 import os
 import json
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -259,7 +260,7 @@ def assumir_ccb(ccb, valor, parceiro, analista, status_bankerize):
         ccb,
         valor,
         parceiro,
-        datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+        datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M:%S"),
         status_bankerize,
         "Em Análise",
         analista,
@@ -536,6 +537,7 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
 
 
