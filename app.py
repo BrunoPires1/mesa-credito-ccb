@@ -210,26 +210,42 @@ else:
 
 @st.cache_data(ttl=300)
 def carregar_base():
-    return sheet.get_all_values()
+
+    dados = sheet.get_all_values()
+
+    if len(dados) <= 1:
+        return pd.DataFrame()
+
+    header = dados[0]
+    registros = dados[1:]
+
+    df = pd.DataFrame(registros, columns=header)
+
+    return df
 
 def buscar_ccb(ccb):
-    dados = carregar_base()
-    if len(dados) <= 1:
+
+    df = carregar_base()
+
+    if df.empty:
         return None
-    for linha in dados[1:]:
-        if str(linha[0]) == str(ccb):
-            return linha
-    return None
+
+    resultado = df[df["CCB"] == str(ccb)]
+
+    if resultado.empty:
+        return None
+
+    return resultado.iloc[0]
 
 def assumir_ccb(ccb, valor, parceiro, analista, status_bankerize):
     if not ccb:
         return "Informe a CCB."
 
-    dados = carregar_base()
+    df = carregar_base()
 
-    for linha in dados[1:]:
-        numero = str(linha[0])
-        status = linha[5]
+    for _, linha in df.iterrows():
+        numero = str(linha["CCB"])
+        status = linha["Status Analista"]
 
         if numero == str(ccb):
             if status in ["Análise Aprovada", "Análise Reprovada"]:
@@ -250,18 +266,20 @@ def assumir_ccb(ccb, valor, parceiro, analista, status_bankerize):
         ""
     ]
 
-    sheet.insert_row(nova_linha, index=len(dados) + 1)
+    sheet.append_row(nova_linha)
     st.cache_data.clear()
     st.session_state["ccb_ativa"] = ccb
     return "OK"
 
 def finalizar_ccb(ccb, resultado, anotacoes, status_bankerize):
-    dados = carregar_base()
-    for idx, linha in enumerate(dados[1:], start=2):
-        if str(linha[0]) == str(ccb):
-            sheet.update(f"E{idx}", [[status_bankerize]])
-            sheet.update(f"F{idx}", [[resultado]])
-            sheet.update(f"H{idx}", [[anotacoes]])
+    df = carregar_base()
+    for idx, linha in df.iterrows():
+        if str(linha["CCB"]) == str(ccb):
+            linha_real = idx + 2
+
+            sheet.update(f"E{linha_real}", [[status_bankerize]])
+            sheet.update(f"F{linha_real}", [[resultado]])
+            sheet.update(f"H{linha_real}", [[anotacoes]])
             st.cache_data.clear()
             return "Finalizado"
     return "CCB não encontrada."
@@ -345,9 +363,7 @@ if menu == "📋 Operação":
 
     if len(dados) > 1:
 
-        header = dados[0]
-        registros = dados[1:]
-        df = pd.DataFrame(registros, columns=header)
+        df = carregar_base()
 
         df["Data da Análise"] = pd.to_datetime(
             df["Data da Análise"],
@@ -374,12 +390,7 @@ if menu == "📊 Acompanhamento":
 
     st.title("📊 Acompanhamento")
 
-    dados = carregar_base()
-    if len(dados) > 1:
-
-        header = dados[0]
-        registros = dados[1:]
-        df = pd.DataFrame(registros, columns=header)
+    df = carregar_base()
 
         df["Data da Análise"] = pd.to_datetime(df["Data da Análise"], dayfirst=True, errors="coerce")
         df = df.dropna(subset=["Data da Análise"])
@@ -524,6 +535,7 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
 
 
