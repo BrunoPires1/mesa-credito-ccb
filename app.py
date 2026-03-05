@@ -117,8 +117,6 @@ scope = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-creds = ServiceAccountCredentials.from_json_keyfile_dict(google_creds, scope)
-client = gspread.authorize(creds)
 @st.cache_resource
 def conectar_google():
 
@@ -359,11 +357,9 @@ if menu == "📋 Operação":
     st.divider()
     st.subheader("📊 Painel Geral")
 
-    dados = carregar_base()
-
-    if len(dados) > 1:
-
-        df = carregar_base()
+    df = carregar_base()
+    
+    if not df.empty:
 
         df["Data da Análise"] = pd.to_datetime(
             df["Data da Análise"],
@@ -391,6 +387,8 @@ if menu == "📊 Acompanhamento":
     st.title("📊 Acompanhamento")
 
     df = carregar_base()
+
+    if not df.empty:
 
         df["Data da Análise"] = pd.to_datetime(df["Data da Análise"], dayfirst=True, errors="coerce")
         df = df.dropna(subset=["Data da Análise"])
@@ -535,6 +533,7 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
 
 
