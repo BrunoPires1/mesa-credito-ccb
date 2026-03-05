@@ -11,6 +11,23 @@ import matplotlib.pyplot as plt
 st.set_page_config(layout="wide")
 
 # ==============================
+# DETECTAR TEMA DO NAVEGADOR
+# ==============================
+
+if "tema" not in st.session_state:
+
+    try:
+        tema_streamlit = st.get_option("theme.base")
+
+        if tema_streamlit == "dark":
+            st.session_state.tema = "escuro"
+        else:
+            st.session_state.tema = "claro"
+
+    except:
+        st.session_state.tema = "claro"
+
+# ==============================
 # CONTROLE DE TEMA (CLARO / ESCURO)
 # ==============================
 
@@ -56,13 +73,13 @@ else:
     }
 
     h1, h2, h3 {
-        color: #58a6ff;
+        color: #79c0ff;
     }
 
-    /* labels dos campos */
+    /* títulos dos campos */
     label {
-        color: #e6edf3 !important;
-        font-weight: 500;
+        color: #f0f6fc !important;
+        font-weight: 600;
     }
 
     /* texto digitado */
@@ -537,6 +554,7 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
 
 
