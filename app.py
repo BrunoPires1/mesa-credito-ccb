@@ -10,40 +10,15 @@ import matplotlib.pyplot as plt
 
 st.set_page_config(layout="wide")
 
-# ==============================
-# DETECTAR TEMA DO NAVEGADOR
-# ==============================
+st.markdown("""
+<style>
 
-if "tema" not in st.session_state:
+/* ============================= */
+/* TEMA CLARO AUTOMÁTICO */
+/* ============================= */
 
-    try:
-        tema_streamlit = st.get_option("theme.base")
+@media (prefers-color-scheme: light) {
 
-        if tema_streamlit == "dark":
-            st.session_state.tema = "escuro"
-        else:
-            st.session_state.tema = "claro"
-
-    except:
-        st.session_state.tema = "claro"
-
-# ==============================
-# CONTROLE DE TEMA (CLARO / ESCURO)
-# ==============================
-
-if "tema" not in st.session_state:
-    st.session_state.tema = "claro"
-
-st.write("SISTEMA DE CONTROLE DE ANÁLISE DE CRÉDITO ECONSIGNADO")
-
-# ==============================
-# ESTILO DINÂMICO (CLARO / ESCURO)
-# ==============================
-
-if st.session_state.tema == "claro":
-
-    st.markdown("""
-    <style>
     .stApp {
         background-color: #f4f6f9;
         color: #000000;
@@ -53,19 +28,26 @@ if st.session_state.tema == "claro":
         color: #0d3b66;
     }
 
+    label {
+        color: #1f2937 !important;
+        font-weight: 600;
+    }
+
     .stButton>button {
         background-color: #0d3b66;
         color: white;
         border-radius: 8px;
         padding: 8px 16px;
     }
-    </style>
-    """, unsafe_allow_html=True)
 
-else:
+}
 
-    st.markdown("""
-    <style>
+
+/* ============================= */
+/* TEMA ESCURO AUTOMÁTICO */
+/* ============================= */
+
+@media (prefers-color-scheme: dark) {
 
     .stApp {
         background-color: #0e1117;
@@ -76,18 +58,15 @@ else:
         color: #79c0ff;
     }
 
-    /* títulos dos campos */
     label {
         color: #f0f6fc !important;
         font-weight: 600;
     }
 
-    /* texto digitado */
     input, textarea {
         color: #ffffff !important;
     }
 
-    /* fundo dos campos */
     .stTextInput input,
     .stNumberInput input,
     .stTextArea textarea {
@@ -96,18 +75,15 @@ else:
         border: 1px solid #30363d !important;
     }
 
-    /* selectbox */
     .stSelectbox div[data-baseweb="select"] {
         background-color: #161b22 !important;
         color: #ffffff !important;
     }
 
-    /* texto dentro do select */
     .stSelectbox div {
         color: #ffffff !important;
     }
 
-    /* botões */
     .stButton>button {
         background-color: #238636;
         color: white;
@@ -115,13 +91,12 @@ else:
         padding: 8px 16px;
     }
 
-    /* tabela */
-    .stDataFrame {
-        color: white;
-    }
+}
 
-    </style>
-    """, unsafe_allow_html=True)
+</style>
+""", unsafe_allow_html=True)
+
+st.write("SISTEMA DE CONTROLE DE ANÁLISE DE CRÉDITO ECONSIGNADO")
 
 # ==============================
 # CONFIGURAÇÕES
@@ -554,6 +529,7 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
 
 
