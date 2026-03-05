@@ -357,7 +357,7 @@ if menu == "📋 Operação":
     st.divider()
     st.subheader("📊 Painel Geral")
 
-    df = carregar_base()
+    df = carregar_base().copy()
     
     if not df.empty:
 
@@ -386,7 +386,7 @@ if menu == "📊 Acompanhamento":
 
     st.title("📊 Acompanhamento")
 
-    df = carregar_base()
+    df = carregar_base().copy()
 
     if not df.empty:
 
@@ -533,6 +533,7 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
 
 
