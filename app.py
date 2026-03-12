@@ -17,7 +17,7 @@ st.markdown("""
 <style>
 
 /* ============================= */
-/* TEMA CLARO AUTOMÁTICO */
+/* TEMA CLARO AUTOMÁTICO teste*/
 /* ============================= */
 
 @media (prefers-color-scheme: light) {
@@ -532,6 +532,7 @@ if menu == "🔐 Administração":
 
         st.success("Usuário excluído com sucesso!")
         st.rerun()
+
 
 
 
